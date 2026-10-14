@@ -1,0 +1,10 @@
+{
+  "extends": "@lumenflow/config/typescript",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": ["node"]
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "src/__tests__"]
+}

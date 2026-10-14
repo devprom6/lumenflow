@@ -1,0 +1,37 @@
+{
+  "name": "lumenflow",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md}\"",
+    "scripts:create-testnet-account": "ts-node scripts/create-testnet-account.ts",
+    "scripts:seed-testnet-liquidity": "ts-node scripts/seed-testnet-liquidity.ts"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "21.2.3",
+    "@commitlint/config-conventional": "21.2.3",
+    "@stellar/stellar-sdk": "17.2.1",
+    "@types/node": "22.15.17",
+    "husky": "9.1.7",
+    "lint-staged": "17.6.0",
+    "prettier": "3.9.10",
+    "ts-node": "10.9.2",
+    "turbo": "2.11.8",
+    "typescript": "7.0.2"
+  },
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": ["prettier --write"],
+    "*.{js,json,md,yml,yaml}": ["prettier --write"]
+  }
+}

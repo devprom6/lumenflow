@@ -1,0 +1,41 @@
+{
+  "name": "@lumenflow/web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@creit.tech/stellar-wallets-kit": "2.7.1",
+    "@lumenflow/shared-types": "workspace:*",
+    "@lumenflow/ui": "workspace:*",
+    "@tanstack/react-query": "5.104.2",
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zustand": "5.0.15",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@lumenflow/config": "workspace:*",
+    "@playwright/test": "1.64.0",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "22.15.17",
+    "@types/react": "19.1.2",
+    "@types/react-dom": "19.1.2",
+    "@vitejs/plugin-react": "6.1.2",
+    "autoprefixer": "10.4.21",
+    "jsdom": "26.1.0",
+    "postcss": "8.5.3",
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2",
+    "vitest": "5.0.4"
+  }
+}

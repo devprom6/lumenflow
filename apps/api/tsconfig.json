@@ -1,0 +1,14 @@
+{
+  "extends": "@lumenflow/config/typescript",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmit": false
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "test"]
+}

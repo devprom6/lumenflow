@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+
+# Environment files (NEVER commit these)
+.env
+.env.local
+.env.*.local
+apps/web/.env.local
+apps/api/.env
+apps/worker/.env
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime / OS
+.DS_Store
+Thumbs.db
+*.pid
+*.pid.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Turbo
+.turbo/
+
+# TypeScript
+*.tsbuildinfo
+
+# Prisma
+prisma/migrations/dev.db
+Plan.md

@@ -1,0 +1,19 @@
+{
+  "name": "@lumenflow/config",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./eslint": "./eslint.js",
+    "./typescript": "./typescript.json",
+    "./prettier": "./prettier.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@typescript-eslint/eslint-plugin": "8.71.2",
+    "@typescript-eslint/parser": "8.71.2",
+    "eslint": "10.12.0",
+    "eslint-config-next": "16.4.0",
+    "prettier": "3.9.10",
+    "typescript": "7.0.2"
+  }
+}
