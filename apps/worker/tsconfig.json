@@ -2,10 +2,11 @@
   "extends": "@lumenflow/config/typescript",
   "compilerOptions": {
     "module": "commonjs",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "rootDir": "src",
     "outDir": "dist",
-    "noEmit": false
+    "noEmit": false,
+    "types": ["node"]
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]

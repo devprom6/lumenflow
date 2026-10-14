@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "nest start --watch",
-    "build": "nest build",
+    "dev": "tsc --watch",
+    "build": "tsc",
     "start": "node dist/main",
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "typecheck": "tsc --noEmit",
