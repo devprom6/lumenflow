@@ -1,11 +1,14 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import type {
-  ChallengeRequestDto,
-  ChallengeResponseDto,
-  VerifyRequestDto,
-  VerifyResponseDto,
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import {
+  ChallengeRequestSchema,
+  VerifyRequestSchema,
+  type ChallengeRequestDto,
+  type ChallengeResponseDto,
+  type VerifyRequestDto,
+  type VerifyResponseDto,
 } from './dtos/auth.dto';
 
 @ApiTags('Auth')
@@ -25,7 +28,9 @@ export class AuthController {
     description: 'Challenge transaction XDR and network passphrase returned.',
   })
   @ApiResponse({ status: 400, description: 'Invalid public key format.' })
-  challenge(@Body() body: ChallengeRequestDto): ChallengeResponseDto {
+  challenge(
+    @Body(new ZodValidationPipe(ChallengeRequestSchema)) body: ChallengeRequestDto,
+  ): ChallengeResponseDto {
     return this.authService.generateChallenge(body.publicKey);
   }
 
@@ -44,7 +49,9 @@ export class AuthController {
     status: 401,
     description: 'Invalid signature, expired challenge, or untrusted signer.',
   })
-  async verify(@Body() body: VerifyRequestDto): Promise<VerifyResponseDto> {
+  async verify(
+    @Body(new ZodValidationPipe(VerifyRequestSchema)) body: VerifyRequestDto,
+  ): Promise<VerifyResponseDto> {
     return this.authService.verifyChallenge(body.transaction);
   }
 }

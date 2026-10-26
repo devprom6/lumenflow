@@ -8,12 +8,16 @@ import {
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { SwapService } from './swap.service';
 import type { Quote } from '@lumenflow/shared-types';
-import type {
-  CreateSwapQuoteRequestDto,
-  BuildSwapRequestDto,
-  BuildSwapResponseDto,
-  SubmitSwapRequestDto,
-  SubmitSwapResponseDto,
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import {
+  CreateSwapQuoteRequestSchema,
+  BuildSwapRequestSchema,
+  SubmitSwapRequestSchema,
+  type CreateSwapQuoteRequestDto,
+  type BuildSwapRequestDto,
+  type BuildSwapResponseDto,
+  type SubmitSwapRequestDto,
+  type SubmitSwapResponseDto,
 } from './dtos/swap.dto';
 
 @ApiTags('Swap')
@@ -30,7 +34,10 @@ export class SwapController {
   })
   @ApiResponse({ status: 200, description: 'Live swap quote returned.' })
   @ApiResponse({ status: 400, description: 'Invalid asset or amount parameter.' })
-  async getQuote(@Body() body: CreateSwapQuoteRequestDto): Promise<Quote> {
+  async getQuote(
+    @Body(new ZodValidationPipe(CreateSwapQuoteRequestSchema))
+    body: CreateSwapQuoteRequestDto,
+  ): Promise<Quote> {
     return this.swapService.createQuote(body);
   }
 
@@ -49,16 +56,19 @@ export class SwapController {
     status: 400,
     description: 'Quote expired or insufficient reserves.',
   })
-  async build(@Body() body: BuildSwapRequestDto): Promise<BuildSwapResponseDto> {
+  async build(
+    @Body(new ZodValidationPipe(BuildSwapRequestSchema))
+    body: BuildSwapRequestDto,
+  ): Promise<BuildSwapResponseDto> {
     return this.swapService.buildSwap(body);
   }
 
   @Post('submit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Submit signed swap transaction',
+    summary: 'Submit a signed swap transaction',
     description:
-      'Submits a user-signed transaction to Stellar Testnet and updates order state ledger.',
+      'Submits the user-signed transaction to Stellar Horizon and updates the order status to COMPLETED.',
   })
   @ApiResponse({
     status: 200,
@@ -66,10 +76,11 @@ export class SwapController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Transaction failed or invalid signature.',
+    description: 'Invalid signature, expired quote, or submission failed.',
   })
   async submit(
-    @Body() body: SubmitSwapRequestDto,
+    @Body(new ZodValidationPipe(SubmitSwapRequestSchema))
+    body: SubmitSwapRequestDto,
   ): Promise<SubmitSwapResponseDto> {
     return this.swapService.submitSwap(body);
   }

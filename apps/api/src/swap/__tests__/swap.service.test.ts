@@ -17,7 +17,7 @@ vi.mock('@lumenflow/stellar', async () => {
   const actual = await vi.importActual<typeof import('@lumenflow/stellar')>('@lumenflow/stellar');
   return {
     ...actual,
-    buildSwapTransaction: vi.fn().mockImplementation(async () => {
+    buildSwapTransaction: vi.fn().mockImplementation(() => {
       const dummyAccount = new Account('GBZXN7PIRZGNMHGA7MUUUF4GWPY5AYPV6LY4UV2GL6VJGIQRXFDNMADI', '1');
       const tx = new TransactionBuilder(dummyAccount, {
         fee: '100',
@@ -32,10 +32,10 @@ vi.mock('@lumenflow/stellar', async () => {
         .setTimeout(300)
         .build();
 
-      return {
+      return Promise.resolve({
         unsignedXdr: tx.toXDR(),
         addedTrustline: false,
-      };
+      });
     }),
     submitTransaction: vi.fn().mockResolvedValue({
       hash: 'mock-tx-hash-1234567890abcdef',

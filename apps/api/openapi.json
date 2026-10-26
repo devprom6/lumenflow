@@ -1,0 +1,397 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "description": "Checks connectivity to PostgreSQL database, Redis instance, and Stellar Horizon Testnet.",
+        "operationId": "HealthController_getHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "System is healthy or running with fallbacks."
+          },
+          "503": {
+            "description": "Core system component is down."
+          }
+        },
+        "summary": "System health check",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/auth/challenge": {
+      "post": {
+        "description": "Generates an unsigned challenge transaction for the wallet to sign.",
+        "operationId": "AuthController_challenge",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Challenge transaction XDR and network passphrase returned."
+          },
+          "400": {
+            "description": "Invalid public key format."
+          }
+        },
+        "summary": "Request SEP-10 wallet challenge",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/verify": {
+      "post": {
+        "description": "Verifies the wallet signature, upserts the user, and issues a session JWT.",
+        "operationId": "AuthController_verify",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Session JWT and authenticated user info returned."
+          },
+          "401": {
+            "description": "Invalid signature, expired challenge, or untrusted signer."
+          }
+        },
+        "summary": "Verify signed SEP-10 challenge",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/assets": {
+      "get": {
+        "description": "Returns all Stellar testnet assets supported by LumenFlow.",
+        "operationId": "AssetsController_getAssets",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List of supported assets with issuer and metadata."
+          }
+        },
+        "summary": "List supported assets",
+        "tags": [
+          "Assets"
+        ]
+      }
+    },
+    "/swap/quote": {
+      "post": {
+        "description": "Calculates the best route across order-book DEX and liquidity pools with fee breakdown and expiry.",
+        "operationId": "SwapController_getQuote",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Live swap quote returned."
+          },
+          "400": {
+            "description": "Invalid asset or amount parameter."
+          }
+        },
+        "summary": "Get a swap quote",
+        "tags": [
+          "Swap"
+        ]
+      }
+    },
+    "/swap/build": {
+      "post": {
+        "description": "Generates an unsigned Stellar transaction XDR (including changeTrust if needed). Non-custodial: user signs.",
+        "operationId": "SwapController_build",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Unsigned transaction XDR ready for wallet signing."
+          },
+          "400": {
+            "description": "Quote expired or insufficient reserves."
+          }
+        },
+        "summary": "Build an unsigned swap transaction",
+        "tags": [
+          "Swap"
+        ]
+      }
+    },
+    "/swap/submit": {
+      "post": {
+        "description": "Submits the user-signed transaction to Stellar Horizon and updates the order status to COMPLETED.",
+        "operationId": "SwapController_submit",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Transaction submitted and confirmed on ledger."
+          },
+          "400": {
+            "description": "Invalid signature, expired quote, or submission failed."
+          }
+        },
+        "summary": "Submit a signed swap transaction",
+        "tags": [
+          "Swap"
+        ]
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "description": "Fetches an order by ID including its immutable append-only state transition ledger.",
+        "operationId": "OrdersController_getOrder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Order UUID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order details with event history."
+          },
+          "404": {
+            "description": "Order not found."
+          }
+        },
+        "summary": "Get order details and append-only event history",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/transactions": {
+      "get": {
+        "description": "Lists all swap, bridge, and offramp orders for the user.",
+        "operationId": "OrdersController_getTransactions",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by user ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of user transactions."
+          }
+        },
+        "summary": "List user transaction history",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/bridge/quote": {
+      "post": {
+        "operationId": "BridgeStubController_getQuote",
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "Bridge routes coming in Phase 2."
+          }
+        },
+        "summary": "Get bridge route quote (Phase 2)",
+        "tags": [
+          "Bridge (Stub)"
+        ]
+      }
+    },
+    "/bridge/transfer": {
+      "post": {
+        "operationId": "BridgeStubController_initiateTransfer",
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "Bridge transfers coming in Phase 2."
+          }
+        },
+        "summary": "Initiate bridge transfer (Phase 2)",
+        "tags": [
+          "Bridge (Stub)"
+        ]
+      }
+    },
+    "/bridge/transfer/{id}": {
+      "get": {
+        "operationId": "BridgeStubController_getStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "Bridge transfer tracking coming in Phase 2."
+          }
+        },
+        "summary": "Get bridge transfer status (Phase 2)",
+        "tags": [
+          "Bridge (Stub)"
+        ]
+      }
+    },
+    "/offramp/quote": {
+      "post": {
+        "operationId": "OfframpStubController_getQuote",
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "Offramp corridors coming in Phase 2."
+          }
+        },
+        "summary": "Get offramp quote (Phase 2)",
+        "tags": [
+          "Offramp (Stub)"
+        ]
+      }
+    },
+    "/offramp/orders": {
+      "post": {
+        "operationId": "OfframpStubController_createOrder",
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "Offramp orders coming in Phase 2."
+          }
+        },
+        "summary": "Create offramp order (Phase 2)",
+        "tags": [
+          "Offramp (Stub)"
+        ]
+      }
+    },
+    "/offramp/orders/{id}": {
+      "get": {
+        "operationId": "OfframpStubController_getStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "501": {
+            "description": "Offramp tracking coming in Phase 2."
+          }
+        },
+        "summary": "Get offramp order status (Phase 2)",
+        "tags": [
+          "Offramp (Stub)"
+        ]
+      }
+    },
+    "/webhooks/anchor": {
+      "post": {
+        "operationId": "WebhooksStubController_anchorCallback",
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "Anchor webhook callback not implemented yet."
+          }
+        },
+        "summary": "Anchor status callback",
+        "tags": [
+          "Webhooks (Stub)"
+        ]
+      }
+    },
+    "/webhooks/bridge": {
+      "post": {
+        "operationId": "WebhooksStubController_bridgeCallback",
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "Bridge webhook callback not implemented yet."
+          }
+        },
+        "summary": "Bridge status callback",
+        "tags": [
+          "Webhooks (Stub)"
+        ]
+      }
+    },
+    "/webhooks/payout": {
+      "post": {
+        "operationId": "WebhooksStubController_payoutCallback",
+        "parameters": [],
+        "responses": {
+          "501": {
+            "description": "Payout webhook callback not implemented yet."
+          }
+        },
+        "summary": "Payout status callback",
+        "tags": [
+          "Webhooks (Stub)"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "LumenFlow API",
+    "description": "Stellar-based platform for non-custodial swaps, cross-chain bridging, and crypto offramps.",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "SEP-10 wallet authentication and challenge verification"
+    },
+    {
+      "name": "Swap",
+      "description": "Live quotes, unsigned transaction building, and submission"
+    },
+    {
+      "name": "Assets",
+      "description": "Supported Stellar assets on testnet"
+    },
+    {
+      "name": "Orders",
+      "description": "Order status tracking and transaction history"
+    },
+    {
+      "name": "Bridge",
+      "description": "Cross-chain bridge stubs (external providers)"
+    },
+    {
+      "name": "Offramp",
+      "description": "Anchor/payout offramp stubs (external providers)"
+    },
+    {
+      "name": "Webhooks",
+      "description": "Provider webhook stubs"
+    },
+    {
+      "name": "Health",
+      "description": "System and external service connectivity health check"
+    }
+  ],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "JWT-auth": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "name": "Authorization",
+        "description": "Enter session JWT obtained from /auth/verify",
+        "in": "header"
+      }
+    },
+    "schemas": {}
+  }
+}
