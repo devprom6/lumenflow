@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     passWithNoTests: true,
+    include: ['src/**/*.test.{ts,tsx}'],
     coverage: {
       reporter: ['text', 'lcov'],
     },

@@ -30,9 +30,11 @@
   },
   "devDependencies": {
     "@lumenflow/config": "workspace:*",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "22.15.17",
     "@types/react": "19.1.2",
     "@types/react-dom": "19.1.2",
+    "jsdom": "^26.0.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "typescript": "7.0.2",
