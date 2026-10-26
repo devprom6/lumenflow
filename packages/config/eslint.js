@@ -67,6 +67,8 @@ const config = [
       '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/no-extraneous-class': 'off',
       '@typescript-eslint/restrict-template-expressions': 'off',
+      '@typescript-eslint/no-unnecessary-type-parameters': 'off',
+      '@typescript-eslint/no-confusing-void-expression': 'off',
       // Enforce no `any` as required by the README
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unsafe-assignment': 'error',
