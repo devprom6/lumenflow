@@ -39,5 +39,5 @@ export const LEGAL_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 
 /** Returns true if transitioning from `from` to `to` is legal. */
 export function isLegalTransition(from: OrderStatus, to: OrderStatus): boolean {
-  return (LEGAL_TRANSITIONS[from] ?? []).includes(to);
+  return LEGAL_TRANSITIONS[from].includes(to);
 }

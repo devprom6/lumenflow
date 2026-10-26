@@ -39,9 +39,11 @@ export async function withRetry<T>(
     try {
       return await Promise.race([
         operation(),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Request timed out')), DEFAULT_TIMEOUT_MS),
-        ),
+        new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error('Request timed out'));
+          }, DEFAULT_TIMEOUT_MS);
+        }),
       ]);
     } catch (err) {
       lastError = err;
@@ -55,5 +57,7 @@ export async function withRetry<T>(
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }

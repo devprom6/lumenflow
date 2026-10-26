@@ -13,7 +13,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "lint": "eslint \"src/**/*.tsx\"",
+    "lint": "eslint \"src/**/*.{ts,tsx}\" --no-error-on-unmatched-pattern",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"

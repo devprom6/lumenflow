@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { getSwapQuote } from '../quote-engine';
-import { StellarError } from '@lumenflow/stellar';
 import type { RouteSource, RouteResult } from '../route-source';
 import type { Asset } from '@lumenflow/shared-types';
 
@@ -15,8 +14,8 @@ const USDC: Asset = {
 function makeSource(routes: RouteResult[]): RouteSource {
   return {
     name: 'mock',
-    findStrictSendRoutes: async () => routes,
-    findStrictReceiveRoutes: async () => routes,
+    findStrictSendRoutes: () => Promise.resolve(routes),
+    findStrictReceiveRoutes: () => Promise.resolve(routes),
   };
 }
 

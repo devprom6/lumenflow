@@ -2,7 +2,7 @@
  * Trustline helpers: detection and changeTrust operation builder.
  */
 
-import { Operation, Asset as StellarAsset } from '@stellar/stellar-sdk';
+import { Operation } from '@stellar/stellar-sdk';
 import type { Asset } from '@lumenflow/shared-types';
 import { toStellarAsset } from './accounts';
 
@@ -24,7 +24,7 @@ export function buildChangeTrustOp(
 
   const stellarAsset = toStellarAsset(asset);
   return Operation.changeTrust({
-    asset: stellarAsset as StellarAsset,
+    asset: stellarAsset,
     limit,
   });
 }

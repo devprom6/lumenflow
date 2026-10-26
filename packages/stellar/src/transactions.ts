@@ -12,9 +12,7 @@
 import {
   TransactionBuilder,
   Operation,
-  Asset as StellarAsset,
   Memo,
-  Networks,
 } from '@stellar/stellar-sdk';
 import type { Asset } from '@lumenflow/shared-types';
 import { loadAccount, hasTrustline, toStellarAsset } from './accounts';
@@ -103,12 +101,12 @@ export async function buildSwapTransaction(
   // 3. pathPaymentStrictSend: send exactly sourceAmount, receive at least minimumDestinationAmount
   builder.addOperation(
     Operation.pathPaymentStrictSend({
-      sendAsset: stellarSource as StellarAsset,
+      sendAsset: stellarSource,
       sendAmount: sourceAmount,
       destination: senderPublicKey,
-      destAsset: stellarDest as StellarAsset,
+      destAsset: stellarDest,
       destMin: minimumDestinationAmount,
-      path: stellarPath as StellarAsset[],
+      path: stellarPath,
     }),
   );
 
@@ -179,12 +177,12 @@ export async function buildStrictReceiveSwapTransaction(params: {
 
   builder.addOperation(
     Operation.pathPaymentStrictReceive({
-      sendAsset: stellarSource as StellarAsset,
+      sendAsset: stellarSource,
       sendMax: maxSourceAmount,
       destination: senderPublicKey,
-      destAsset: stellarDest as StellarAsset,
+      destAsset: stellarDest,
       destAmount: destinationAmount,
-      path: stellarPath as StellarAsset[],
+      path: stellarPath,
     }),
   );
 
