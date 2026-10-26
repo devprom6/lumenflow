@@ -32,7 +32,7 @@ export const Header: React.FC = () => {
               <span className="text-lg">LumenFlow</span>
             </Link>
 
-            {/* Navigation links */}
+            {/* Desktop Navigation links */}
             <nav className="hidden md:flex items-center gap-1 text-sm font-medium">
               <Link
                 href="/"
@@ -128,6 +128,58 @@ export const Header: React.FC = () => {
           </div>
         </div>
       </header>
+
+      {/* Mobile Navigation Bar */}
+      <nav
+        aria-label="Mobile Navigation"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-slate-200 bg-white/95 px-3 py-2 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/95"
+      >
+        <Link
+          href="/"
+          className={`flex flex-col items-center gap-1 py-1 px-3 text-xs font-medium rounded-lg ${
+            pathname === '/'
+              ? 'text-blue-600 dark:text-blue-400 font-bold'
+              : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'
+          }`}
+        >
+          <span>Swap</span>
+        </Link>
+
+        <button
+          type="button"
+          disabled
+          aria-disabled="true"
+          className="flex flex-col items-center gap-0.5 py-1 px-3 text-xs text-slate-400 cursor-not-allowed dark:text-slate-600"
+        >
+          <span>Bridge</span>
+          <span className="text-[9px] rounded-full bg-slate-100 px-1 dark:bg-slate-800">
+            Soon
+          </span>
+        </button>
+
+        <button
+          type="button"
+          disabled
+          aria-disabled="true"
+          className="flex flex-col items-center gap-0.5 py-1 px-3 text-xs text-slate-400 cursor-not-allowed dark:text-slate-600"
+        >
+          <span>Offramp</span>
+          <span className="text-[9px] rounded-full bg-slate-100 px-1 dark:bg-slate-800">
+            Soon
+          </span>
+        </button>
+
+        <Link
+          href="/history"
+          className={`flex flex-col items-center gap-1 py-1 px-3 text-xs font-medium rounded-lg ${
+            pathname === '/history'
+              ? 'text-blue-600 dark:text-blue-400 font-bold'
+              : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'
+          }`}
+        >
+          <span>History</span>
+        </Link>
+      </nav>
 
       <WalletModal
         isOpen={isWalletModalOpen}

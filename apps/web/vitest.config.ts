@@ -5,6 +5,8 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
+    include: ['src/**/*.test.{ts,tsx}'],
+    exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
     passWithNoTests: true,
     coverage: {
       reporter: ['text', 'lcov'],
