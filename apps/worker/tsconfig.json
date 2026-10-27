@@ -6,8 +6,9 @@
     "rootDir": "src",
     "outDir": "dist",
     "noEmit": false,
+    "lib": ["ES2022"],
     "types": ["node"]
   },
   "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", "dist", "src/__tests__"]
 }

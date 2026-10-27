@@ -223,6 +223,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@lumenflow/bridge-adapters':
+        specifier: workspace:*
+        version: link:../../packages/bridge-adapters
       '@lumenflow/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types

@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@lumenflow/bridge-adapters": "workspace:*",
     "@lumenflow/shared-types": "workspace:*",
     "@lumenflow/stellar": "workspace:*",
     "@prisma/client": "7.10.0",
