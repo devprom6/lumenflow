@@ -2,6 +2,7 @@ import type {
   Asset,
   Quote,
   Order,
+  OfframpQuote,
 } from '@lumenflow/shared-types';
 
 const API_BASE_URL =
@@ -213,6 +214,67 @@ export class ApiService {
 
     if (!res.ok) {
       const message = await extractErrorMessage(res, 'Failed to fetch order');
+      throw new Error(message);
+    }
+
+    return (await res.json()) as Order;
+  }
+
+  static async getOfframpQuote(
+    sourceAsset: Asset,
+    destinationCurrency: string,
+    sourceAmount: string,
+    token?: string | null,
+  ): Promise<OfframpQuote> {
+    const res = await fetch(`${API_BASE_URL}/offramp/quote`, {
+      method: 'POST',
+      headers: this.getHeaders(token),
+      body: JSON.stringify({
+        sourceAsset,
+        destinationCurrency,
+        sourceAmount,
+      }),
+    });
+
+    if (!res.ok) {
+      const message = await extractErrorMessage(res, 'Failed to fetch offramp quote');
+      throw new Error(message);
+    }
+
+    return (await res.json()) as OfframpQuote;
+  }
+
+  static async createOfframpOrder(
+    quoteId: string,
+    userAddress: string,
+    destinationDetails?: Record<string, string>,
+    token?: string | null,
+  ): Promise<{ order: Order; interactiveUrl: string; anchorTxId: string }> {
+    const res = await fetch(`${API_BASE_URL}/offramp/orders`, {
+      method: 'POST',
+      headers: this.getHeaders(token),
+      body: JSON.stringify({
+        quoteId,
+        userAddress,
+        destinationDetails,
+      }),
+    });
+
+    if (!res.ok) {
+      const message = await extractErrorMessage(res, 'Failed to create offramp order');
+      throw new Error(message);
+    }
+
+    return (await res.json()) as { order: Order; interactiveUrl: string; anchorTxId: string };
+  }
+
+  static async getOfframpOrderStatus(orderId: string, token?: string | null): Promise<Order> {
+    const res = await fetch(`${API_BASE_URL}/offramp/orders/${orderId}`, {
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) {
+      const message = await extractErrorMessage(res, 'Failed to fetch offramp order status');
       throw new Error(message);
     }
 

@@ -160,8 +160,8 @@ test.describe('End-to-End Swap Journey', () => {
     const bridgeNav = page.getByRole('button', { name: /bridge/i }).first();
     await expect(bridgeNav).toBeDisabled();
 
-    const offrampNav = page.getByRole('button', { name: /offramp/i }).first();
-    await expect(offrampNav).toBeDisabled();
+    const offrampNav = page.getByRole('link', { name: /offramp/i }).first();
+    await expect(offrampNav).toBeVisible();
 
     // 2. Connect Wallet
     const connectBtn = page.getByRole('button', { name: 'Connect Wallet', exact: true });
