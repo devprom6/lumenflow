@@ -99,3 +99,14 @@ When adding a third-party bridge provider, evaluate and score against:
 - [ ] Add route configurations and transfer limits to the `BridgeAdapterRegistry`.
 - [ ] Provide test suite verifying quote generation, unsigned transaction output, and status polling.
 - [ ] Configure per-route kill switches in the database/API before activating in production.
+
+### Candidate Bridge Providers for Evaluation (TODOs)
+- **Allbridge Core (`AllbridgeAdapter`)**
+  - *Evaluation notes:* Strong EVM-to-non-EVM messaging capabilities; has existing Stellar/Soroban bridge research.
+  - *Status:* Pending Stellar mainnet contract verification and external audit review. No live integration active.
+- **Mayan / Wormhole (`MayanAdapter`)**
+  - *Evaluation notes:* Cross-chain swap auction protocol built on Wormhole cross-chain messaging.
+  - *Status:* Evaluated for future Solana <-> Stellar liquidity routing. No live integration active.
+- **Axelar / Squid (`SquidAdapter`)**
+  - *Evaluation notes:* General message passing across 60+ chains with Cosmos and EVM support.
+  - *Status:* In exploratory phase. Do not claim native Stellar asset settlement until audited.

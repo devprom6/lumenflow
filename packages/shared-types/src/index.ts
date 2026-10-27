@@ -57,3 +57,23 @@ export type {
   OfframpQuoteRequest,
   OfframpOrderRequest,
 } from './offramp';
+
+export {
+  BridgeRouteSchema,
+  BridgeQuoteParamsSchema,
+  BridgeFeeSchema,
+  BridgeQuoteSchema,
+  UnsignedTransferSchema,
+  TransferStatusEnum,
+  TransferStatusSchema,
+} from './bridge';
+export type {
+  BridgeRoute,
+  QuoteParams,
+  BridgeFee,
+  BridgeQuote,
+  UnsignedTransfer,
+  TransferStatusState,
+  TransferStatus,
+  BridgeAdapter,
+} from './bridge';
