@@ -45,23 +45,16 @@ export const Header: React.FC = () => {
                 Swap
               </Link>
 
-              {/* Disabled but visible navigation with tooltip */}
-              <div className="relative group">
-                <button
-                  type="button"
-                  disabled
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-slate-400 cursor-not-allowed dark:text-slate-600"
-                  aria-disabled="true"
-                >
-                  Bridge
-                  <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                    Soon
-                  </span>
-                </button>
-                <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-1.5 hidden w-48 rounded-lg bg-slate-900 p-2 text-center text-xs text-slate-200 shadow-xl group-hover:block dark:bg-slate-800 z-50">
-                  Cross-chain bridge coming in this build
-                </div>
-              </div>
+              <Link
+                href="/bridge"
+                className={`rounded-lg px-3 py-1.5 transition-colors ${
+                  pathname === '/bridge'
+                    ? 'bg-slate-100 text-blue-600 dark:bg-slate-800 dark:text-blue-400 font-semibold'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
+                }`}
+              >
+                Bridge
+              </Link>
 
               <Link
                 href="/offramp"
@@ -139,17 +132,16 @@ export const Header: React.FC = () => {
           <span>Swap</span>
         </Link>
 
-        <button
-          type="button"
-          disabled
-          aria-disabled="true"
-          className="flex flex-col items-center gap-0.5 py-1 px-3 text-xs text-slate-400 cursor-not-allowed dark:text-slate-600"
+        <Link
+          href="/bridge"
+          className={`flex flex-col items-center gap-1 py-1 px-3 text-xs font-medium rounded-lg ${
+            pathname === '/bridge'
+              ? 'text-blue-600 dark:text-blue-400 font-bold'
+              : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'
+          }`}
         >
           <span>Bridge</span>
-          <span className="text-[9px] rounded-full bg-slate-100 px-1 dark:bg-slate-800">
-            Soon
-          </span>
-        </button>
+        </Link>
 
         <Link
           href="/offramp"

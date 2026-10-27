@@ -3,6 +3,10 @@ import type {
   Quote,
   Order,
   OfframpQuote,
+  BridgeQuote,
+  BridgeRoute,
+  UnsignedTransfer,
+  TransferStatus,
 } from '@lumenflow/shared-types';
 
 const API_BASE_URL =
@@ -279,5 +283,108 @@ export class ApiService {
     }
 
     return (await res.json()) as Order;
+  }
+
+  static async getBridgeRoutes(token?: string | null): Promise<BridgeRoute[]> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/bridge/routes`, {
+        headers: this.getHeaders(token),
+      });
+      if (res.ok) {
+        return (await res.json()) as BridgeRoute[];
+      }
+    } catch {
+      // In offline / fallback mode
+    }
+
+    return [
+      {
+        id: 'stellar-eth-usdc',
+        fromChain: 'stellar',
+        toChain: 'ethereum',
+        fromAsset: 'USDC',
+        toAsset: 'USDC',
+        minAmount: '10',
+        maxAmount: '50000',
+        estimatedDurationSeconds: 120,
+        enabled: true,
+      },
+      {
+        id: 'stellar-polygon-usdc',
+        fromChain: 'stellar',
+        toChain: 'polygon',
+        fromAsset: 'USDC',
+        toAsset: 'USDC',
+        minAmount: '5',
+        maxAmount: '25000',
+        estimatedDurationSeconds: 60,
+        enabled: true,
+      },
+    ];
+  }
+
+  static async getBridgeQuote(
+    params: {
+      fromChain: string;
+      toChain: string;
+      fromAsset: string;
+      toAsset: string;
+      amount: string;
+      slippageTolerance?: number | undefined;
+    },
+    token?: string | null,
+  ): Promise<BridgeQuote> {
+    const res = await fetch(`${API_BASE_URL}/bridge/quote`, {
+      method: 'POST',
+      headers: this.getHeaders(token),
+      body: JSON.stringify(params),
+    });
+
+    if (!res.ok) {
+      const message = await extractErrorMessage(res, 'Failed to fetch bridge quote');
+      throw new Error(message);
+    }
+
+    return (await res.json()) as BridgeQuote;
+  }
+
+  static async initiateBridgeTransfer(
+    quoteId: string,
+    sender: string,
+    destinationRecipient?: string,
+    token?: string | null,
+  ): Promise<{ order: Order; transfer: UnsignedTransfer }> {
+    const res = await fetch(`${API_BASE_URL}/bridge/transfer`, {
+      method: 'POST',
+      headers: this.getHeaders(token),
+      body: JSON.stringify({
+        quoteId,
+        sender,
+        destinationRecipient,
+      }),
+    });
+
+    if (!res.ok) {
+      const message = await extractErrorMessage(res, 'Failed to initiate bridge transfer');
+      throw new Error(message);
+    }
+
+    return (await res.json()) as { order: Order; transfer: UnsignedTransfer };
+  }
+
+  static async getBridgeTransferStatus(
+    id: string,
+    token?: string | null,
+  ): Promise<{ order: Order; status?: TransferStatus | undefined }> {
+    const res = await fetch(`${API_BASE_URL}/bridge/transfer/${id}`, {
+      headers: this.getHeaders(token),
+    });
+
+    if (!res.ok) {
+      const message = await extractErrorMessage(res, 'Failed to get bridge transfer status');
+      throw new Error(message);
+    }
+
+    return (await res.json()) as { order: Order; status?: TransferStatus };
   }
 }

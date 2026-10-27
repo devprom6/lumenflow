@@ -156,9 +156,9 @@ test.describe('End-to-End Swap Journey', () => {
     await page.goto('/');
     await expect(page).toHaveTitle(/LumenFlow/);
 
-    // Verify disabled navigation entries for Bridge and Offramp
-    const bridgeNav = page.getByRole('button', { name: /bridge/i }).first();
-    await expect(bridgeNav).toBeDisabled();
+    // Verify active navigation entries for Bridge and Offramp
+    const bridgeNav = page.getByRole('link', { name: /bridge/i }).first();
+    await expect(bridgeNav).toBeVisible();
 
     const offrampNav = page.getByRole('link', { name: /offramp/i }).first();
     await expect(offrampNav).toBeVisible();
