@@ -252,6 +252,155 @@
         ]
       }
     },
+    "/bridge/routes": {
+      "get": {
+        "operationId": "BridgeController_getRoutes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Supported bridge routes"
+          }
+        },
+        "summary": "Get list of supported cross-chain routes",
+        "tags": [
+          "Bridge"
+        ]
+      }
+    },
+    "/bridge/quote": {
+      "post": {
+        "operationId": "BridgeController_getQuote",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Bridge quote generated successfully"
+          },
+          "400": {
+            "description": "Invalid route, amount below min or above max"
+          },
+          "403": {
+            "description": "Route paused by safeguard kill-switch"
+          }
+        },
+        "summary": "Request cross-chain bridge quote with fee estimate",
+        "tags": [
+          "Bridge"
+        ]
+      }
+    },
+    "/bridge/transfer": {
+      "post": {
+        "operationId": "BridgeController_initiateTransfer",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Unsigned transfer created for local wallet signing"
+          },
+          "400": {
+            "description": "Quote expired or invalid"
+          },
+          "403": {
+            "description": "Safeguard triggered"
+          }
+        },
+        "summary": "Initiate bridge transfer and construct unsigned transaction",
+        "tags": [
+          "Bridge"
+        ]
+      }
+    },
+    "/bridge/transfer/{id}": {
+      "get": {
+        "operationId": "BridgeController_getTransfer",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bridge transfer status details"
+          },
+          "404": {
+            "description": "Transfer or order not found"
+          }
+        },
+        "summary": "Get bridge transfer and on-chain progress status",
+        "tags": [
+          "Bridge"
+        ]
+      }
+    },
+    "/bridge/safeguards/kill-switch": {
+      "post": {
+        "operationId": "BridgeController_toggleKillSwitch",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Safeguard updated successfully"
+          }
+        },
+        "summary": "Toggle route or provider kill switch",
+        "tags": [
+          "Bridge"
+        ]
+      }
+    },
+    "/bridge/safeguards/limits": {
+      "post": {
+        "operationId": "BridgeController_configureLimits",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Route limits updated successfully"
+          }
+        },
+        "summary": "Configure per-route min and max transfer limits",
+        "tags": [
+          "Bridge"
+        ]
+      }
+    },
+    "/webhooks/bridge": {
+      "post": {
+        "operationId": "WebhooksController_bridgeCallback",
+        "parameters": [
+          {
+            "name": "x-webhook-signature",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-signature",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bridge webhook processed idempotently"
+          },
+          "401": {
+            "description": "Invalid HMAC signature"
+          }
+        },
+        "summary": "Cross-chain Bridge provider transfer status callback",
+        "tags": [
+          "Webhooks"
+        ]
+      }
+    },
     "/webhooks/anchor": {
       "post": {
         "operationId": "WebhooksController_anchorCallback",
@@ -319,60 +468,6 @@
         "summary": "Fiat Payout rail status callback",
         "tags": [
           "Webhooks"
-        ]
-      }
-    },
-    "/bridge/quote": {
-      "post": {
-        "operationId": "BridgeStubController_getQuote",
-        "parameters": [],
-        "responses": {
-          "501": {
-            "description": "Bridge routes coming in Phase 2."
-          }
-        },
-        "summary": "Get bridge route quote (Phase 2)",
-        "tags": [
-          "Bridge (Stub)"
-        ]
-      }
-    },
-    "/bridge/transfer": {
-      "post": {
-        "operationId": "BridgeStubController_initiateTransfer",
-        "parameters": [],
-        "responses": {
-          "501": {
-            "description": "Bridge transfers coming in Phase 2."
-          }
-        },
-        "summary": "Initiate bridge transfer (Phase 2)",
-        "tags": [
-          "Bridge (Stub)"
-        ]
-      }
-    },
-    "/bridge/transfer/{id}": {
-      "get": {
-        "operationId": "BridgeStubController_getStatus",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "501": {
-            "description": "Bridge transfer tracking coming in Phase 2."
-          }
-        },
-        "summary": "Get bridge transfer status (Phase 2)",
-        "tags": [
-          "Bridge (Stub)"
         ]
       }
     }

@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@lumenflow/anchor-client": "workspace:*",
+    "@lumenflow/bridge-adapters": "workspace:*",
     "@lumenflow/quote-engine": "workspace:*",
     "@lumenflow/shared-types": "workspace:*",
     "@lumenflow/stellar": "workspace:*",

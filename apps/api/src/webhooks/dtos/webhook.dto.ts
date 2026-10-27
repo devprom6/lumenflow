@@ -20,3 +20,15 @@ export const PayoutWebhookPayloadSchema = z.object({
   timestamp: z.string().optional(),
 });
 export type PayoutWebhookPayload = z.infer<typeof PayoutWebhookPayloadSchema>;
+
+export const BridgeWebhookPayloadSchema = z.object({
+  eventId: z.string().optional(),
+  transferId: z.string(),
+  orderId: z.string().uuid().optional(),
+  provider: z.string().default('MockBridge'),
+  status: z.enum(['PENDING', 'IN_FLIGHT', 'COMPLETED', 'FAILED', 'STUCK']),
+  txHash: z.string().optional(),
+  message: z.string().optional(),
+  timestamp: z.string().optional(),
+});
+export type BridgeWebhookPayload = z.infer<typeof BridgeWebhookPayloadSchema>;

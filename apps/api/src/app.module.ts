@@ -7,8 +7,8 @@ import { AssetsModule } from './assets/assets.module';
 import { SwapModule } from './swap/swap.module';
 import { OrdersModule } from './orders/orders.module';
 import { OfframpModule } from './offramp/offramp.module';
+import { BridgeModule } from './bridge/bridge.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
-import { StubsModule } from './stubs/stubs.module';
 import { HealthModule } from './health/health.module';
 import { RedisModule } from './redis/redis.module';
 import { RedisService } from './redis/redis.service';
@@ -26,8 +26,8 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
     SwapModule,
     OrdersModule,
     OfframpModule,
+    BridgeModule,
     WebhooksModule,
-    StubsModule,
     ThrottlerModule.forRootAsync({
       imports: [RedisModule],
       inject: [RedisService],

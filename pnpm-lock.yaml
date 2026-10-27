@@ -44,6 +44,9 @@ importers:
       '@lumenflow/anchor-client':
         specifier: workspace:*
         version: link:../../packages/anchor-client
+      '@lumenflow/bridge-adapters':
+        specifier: workspace:*
+        version: link:../../packages/bridge-adapters
       '@lumenflow/quote-engine':
         specifier: workspace:*
         version: link:../../packages/quote-engine

@@ -12,6 +12,7 @@ import { OrderStateMachineService } from '../orders/order-state-machine.service'
 import {
   type AnchorWebhookPayload,
   type PayoutWebhookPayload,
+  type BridgeWebhookPayload,
 } from './dtos/webhook.dto';
 
 export interface WebhookProcessingResult {
@@ -341,6 +342,128 @@ export class WebhooksService {
     return {
       received: true,
       orderId: payload.orderId,
+      fromStatus: currentStatus,
+      toStatus: updatedStatus,
+    };
+  }
+
+  /**
+   * Processes Cross-Chain Bridge callbacks.
+   */
+  async processBridgeWebhook(
+    payload: BridgeWebhookPayload,
+    signatureHeader?: string,
+  ): Promise<WebhookProcessingResult> {
+    this.assertValidSignature(signatureHeader, payload);
+
+    const eventId = payload.eventId ?? `bridge-${payload.transferId}-${payload.status}`;
+
+    // Idempotency check
+    if (await this.isDuplicate('bridge', eventId)) {
+      this.logger.log(`Duplicate bridge webhook ignored: event ${eventId}`);
+      return {
+        received: true,
+        idempotent: true,
+        orderId: payload.orderId ?? payload.transferId,
+        message: 'Duplicate bridge webhook already processed',
+      };
+    }
+
+    // Resolve orderId by payload.orderId or externalId (transferId)
+    let orderId = payload.orderId;
+    if (!orderId) {
+      // Find order by externalId
+      const memOrders = (this.stateMachine as unknown as { inMemoryOrders?: Map<string, { id: string; externalId?: string }> }).inMemoryOrders;
+      if (memOrders) {
+        for (const o of memOrders.values()) {
+          if (o.externalId === payload.transferId) {
+            orderId = o.id;
+            break;
+          }
+        }
+      }
+
+      if (!orderId) {
+        try {
+          const dbOrder = await this.prisma.order.findFirst({
+            where: { externalId: payload.transferId },
+          });
+          if (dbOrder) {
+            orderId = dbOrder.id;
+          }
+        } catch {
+          // DB offline
+        }
+      }
+    }
+
+    if (!orderId) {
+      this.logger.warn(`No order found for bridge transferId ${payload.transferId}`);
+      await this.recordWebhookEvent('bridge', eventId, payload.status, payload);
+      return {
+        received: true,
+        orderId: payload.transferId,
+        message: `Bridge transfer ${payload.transferId} status recorded without matched order`,
+      };
+    }
+
+    const currentStatus = await this.getCurrentOrderStatus(orderId);
+
+    try {
+      if (payload.status === 'PENDING') {
+        if (currentStatus === 'AWAITING_SIGNATURE') {
+          await this.stateMachine.transition(orderId, 'SUBMITTED', {
+            stellarTxHash: payload.txHash,
+            reason: 'Bridge deposit observed on source chain',
+          });
+        }
+      } else if (payload.status === 'IN_FLIGHT') {
+        if (currentStatus === 'AWAITING_SIGNATURE') {
+          await this.stateMachine.transition(orderId, 'SUBMITTED', {
+            stellarTxHash: payload.txHash,
+          });
+          await this.stateMachine.transition(orderId, 'PROCESSING', {
+            reason: 'Bridge transfer in flight across chains',
+          });
+        } else if (currentStatus === 'SUBMITTED') {
+          await this.stateMachine.transition(orderId, 'PROCESSING', {
+            reason: 'Bridge transfer in flight across chains',
+          });
+        }
+      } else if (payload.status === 'COMPLETED') {
+        if (currentStatus === 'AWAITING_SIGNATURE') {
+          await this.stateMachine.transition(orderId, 'SUBMITTED', { stellarTxHash: payload.txHash });
+          await this.stateMachine.transition(orderId, 'PROCESSING');
+          await this.stateMachine.transition(orderId, 'COMPLETED', {
+            reason: `Bridge transfer settled on destination chain (${payload.txHash ?? 'confirmed'})`,
+          });
+        } else if (currentStatus === 'SUBMITTED') {
+          await this.stateMachine.transition(orderId, 'PROCESSING');
+          await this.stateMachine.transition(orderId, 'COMPLETED', {
+            reason: `Bridge transfer settled on destination chain (${payload.txHash ?? 'confirmed'})`,
+          });
+        } else if (currentStatus === 'PROCESSING') {
+          await this.stateMachine.transition(orderId, 'COMPLETED', {
+            reason: `Bridge transfer settled on destination chain (${payload.txHash ?? 'confirmed'})`,
+          });
+        }
+      } else if (payload.status === 'FAILED' || payload.status === 'STUCK') {
+        if (currentStatus !== 'COMPLETED' && currentStatus !== 'FAILED') {
+          await this.stateMachine.transition(orderId, 'FAILED', {
+            reason: payload.message ?? `Bridge transfer ${payload.status.toLowerCase()}`,
+          });
+        }
+      }
+    } catch (err: unknown) {
+      this.logger.warn(`Out-of-order bridge webhook handled safely: ${String(err)}`);
+    }
+
+    await this.recordWebhookEvent('bridge', eventId, payload.status, payload);
+
+    const updatedStatus = await this.getCurrentOrderStatus(orderId);
+    return {
+      received: true,
+      orderId,
       fromStatus: currentStatus,
       toStatus: updatedStatus,
     };
