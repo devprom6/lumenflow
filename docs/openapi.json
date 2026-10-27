@@ -186,6 +186,142 @@
         ]
       }
     },
+    "/offramp/quote": {
+      "post": {
+        "operationId": "OfframpController_getQuote",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Guaranteed offramp quote"
+          },
+          "400": {
+            "description": "Invalid amount or currency"
+          }
+        },
+        "summary": "Request offramp rate, fee breakdown, and rate-lock",
+        "tags": [
+          "Offramp"
+        ]
+      }
+    },
+    "/offramp/orders": {
+      "post": {
+        "operationId": "OfframpController_createOrder",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Order created with interactive withdrawal window"
+          },
+          "400": {
+            "description": "Quote expired or limits exceeded"
+          },
+          "403": {
+            "description": "Blocked by compliance screening"
+          }
+        },
+        "summary": "Create offramp order and initiate interactive withdrawal",
+        "tags": [
+          "Offramp"
+        ]
+      }
+    },
+    "/offramp/orders/{id}": {
+      "get": {
+        "operationId": "OfframpController_getStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order status details"
+          },
+          "404": {
+            "description": "Order not found"
+          }
+        },
+        "summary": "Get offramp order status",
+        "tags": [
+          "Offramp"
+        ]
+      }
+    },
+    "/webhooks/anchor": {
+      "post": {
+        "operationId": "WebhooksController_anchorCallback",
+        "parameters": [
+          {
+            "name": "x-webhook-signature",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-signature",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook processed idempotently"
+          },
+          "401": {
+            "description": "Invalid HMAC signature"
+          }
+        },
+        "summary": "Stellar Anchor SEP-24 status callback",
+        "tags": [
+          "Webhooks"
+        ]
+      }
+    },
+    "/webhooks/payout": {
+      "post": {
+        "operationId": "WebhooksController_payoutCallback",
+        "parameters": [
+          {
+            "name": "x-webhook-signature",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-signature",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook processed idempotently"
+          },
+          "401": {
+            "description": "Invalid HMAC signature"
+          }
+        },
+        "summary": "Fiat Payout rail status callback",
+        "tags": [
+          "Webhooks"
+        ]
+      }
+    },
     "/bridge/quote": {
       "post": {
         "operationId": "BridgeStubController_getQuote",
@@ -237,105 +373,6 @@
         "summary": "Get bridge transfer status (Phase 2)",
         "tags": [
           "Bridge (Stub)"
-        ]
-      }
-    },
-    "/offramp/quote": {
-      "post": {
-        "operationId": "OfframpStubController_getQuote",
-        "parameters": [],
-        "responses": {
-          "501": {
-            "description": "Offramp corridors coming in Phase 2."
-          }
-        },
-        "summary": "Get offramp quote (Phase 2)",
-        "tags": [
-          "Offramp (Stub)"
-        ]
-      }
-    },
-    "/offramp/orders": {
-      "post": {
-        "operationId": "OfframpStubController_createOrder",
-        "parameters": [],
-        "responses": {
-          "501": {
-            "description": "Offramp orders coming in Phase 2."
-          }
-        },
-        "summary": "Create offramp order (Phase 2)",
-        "tags": [
-          "Offramp (Stub)"
-        ]
-      }
-    },
-    "/offramp/orders/{id}": {
-      "get": {
-        "operationId": "OfframpStubController_getStatus",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "501": {
-            "description": "Offramp tracking coming in Phase 2."
-          }
-        },
-        "summary": "Get offramp order status (Phase 2)",
-        "tags": [
-          "Offramp (Stub)"
-        ]
-      }
-    },
-    "/webhooks/anchor": {
-      "post": {
-        "operationId": "WebhooksStubController_anchorCallback",
-        "parameters": [],
-        "responses": {
-          "501": {
-            "description": "Anchor webhook callback not implemented yet."
-          }
-        },
-        "summary": "Anchor status callback",
-        "tags": [
-          "Webhooks (Stub)"
-        ]
-      }
-    },
-    "/webhooks/bridge": {
-      "post": {
-        "operationId": "WebhooksStubController_bridgeCallback",
-        "parameters": [],
-        "responses": {
-          "501": {
-            "description": "Bridge webhook callback not implemented yet."
-          }
-        },
-        "summary": "Bridge status callback",
-        "tags": [
-          "Webhooks (Stub)"
-        ]
-      }
-    },
-    "/webhooks/payout": {
-      "post": {
-        "operationId": "WebhooksStubController_payoutCallback",
-        "parameters": [],
-        "responses": {
-          "501": {
-            "description": "Payout webhook callback not implemented yet."
-          }
-        },
-        "summary": "Payout status callback",
-        "tags": [
-          "Webhooks (Stub)"
         ]
       }
     }

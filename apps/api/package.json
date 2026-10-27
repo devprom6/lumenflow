@@ -17,6 +17,7 @@
     "openapi:generate": "node --experimental-strip-types scripts/generate-openapi.ts"
   },
   "dependencies": {
+    "@lumenflow/anchor-client": "workspace:*",
     "@lumenflow/quote-engine": "workspace:*",
     "@lumenflow/shared-types": "workspace:*",
     "@lumenflow/stellar": "workspace:*",

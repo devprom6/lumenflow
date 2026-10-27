@@ -11,10 +11,10 @@ import { PrismaService } from '../database/prisma.service';
 import { IllegalTransitionException } from './errors/illegal-transition.error';
 
 export interface TransitionOptions {
-  reason?: string;
-  metadata?: Record<string, unknown>;
-  stellarTxHash?: string;
-  externalId?: string;
+  reason?: string | undefined;
+  metadata?: Record<string, unknown> | undefined;
+  stellarTxHash?: string | undefined;
+  externalId?: string | undefined;
 }
 
 export interface InMemoryOrder {
