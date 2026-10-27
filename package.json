@@ -12,7 +12,8 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md}\"",
     "scripts:create-testnet-account": "node --experimental-strip-types scripts/create-testnet-account.ts",
     "scripts:seed-testnet-liquidity": "node --experimental-strip-types scripts/seed-testnet-liquidity.ts",
-    "scripts:test-swap-flow": "node --experimental-strip-types scripts/test-swap-flow.ts"
+    "scripts:test-swap-flow": "node --experimental-strip-types scripts/test-swap-flow.ts",
+    "mock-anchor": "node --experimental-strip-types scripts/mock-anchor.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "21.2.3",
