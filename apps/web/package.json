@@ -16,7 +16,7 @@
     "@creit.tech/stellar-wallets-kit": "2.7.1",
     "@lumenflow/shared-types": "workspace:*",
     "@lumenflow/ui": "workspace:*",
-    "@tanstack/react-query": "5.104.2",
+    "@tanstack/react-query": "5.105.0",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
