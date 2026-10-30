@@ -25,7 +25,7 @@ export const BridgeWebhookPayloadSchema = z.object({
   eventId: z.string().optional(),
   transferId: z.string(),
   orderId: z.string().uuid().optional(),
-  provider: z.string().default('MockBridge'),
+  provider: z.string().optional(),
   status: z.enum(['PENDING', 'IN_FLIGHT', 'COMPLETED', 'FAILED', 'STUCK', 'REFUNDED']),
   txHash: z.string().optional(),
   message: z.string().optional(),

@@ -1,0 +1,34 @@
+version: 2
+updates:
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 10
+    labels:
+      - 'dependencies'
+      - 'area/deps'
+    commit-message:
+      prefix: 'chore(deps)'
+
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 5
+    labels:
+      - 'ci'
+      - 'area/ci'
+    commit-message:
+      prefix: 'ci(deps)'
+
+  - package-ecosystem: 'docker'
+    directory: '/infra/docker'
+    schedule:
+      interval: 'monthly'
+    open-pull-requests-limit: 5
+    labels:
+      - 'docker'
+      - 'area/infra'
+    commit-message:
+      prefix: 'infra(deps)'

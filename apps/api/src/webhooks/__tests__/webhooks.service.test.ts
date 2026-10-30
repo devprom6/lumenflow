@@ -197,7 +197,7 @@ describe('WebhooksService Integration', () => {
       const procPayload = {
         eventId: 'payout-proc-evt',
         orderId,
-        status: 'PROCESSING' as const,
+        status: 'PENDING' as const,
       };
       const res = await webhooksService.processPayoutWebhook(procPayload, signPayload(procPayload));
       expect(res.received).toBe(true);
@@ -217,7 +217,7 @@ describe('WebhooksService Integration', () => {
         transferId: 'bridge-tx-123',
         orderId,
         status: 'IN_FLIGHT',
-        sourceTxHash: 'src_tx_999',
+        txHash: 'src_tx_999',
       };
       const resFlight = await webhooksService.processBridgeWebhook(flightPayload, signPayload(flightPayload));
       expect(resFlight.toStatus).toBe('PROCESSING');
@@ -384,9 +384,10 @@ describe('WebhooksService Integration', () => {
     });
 
     it('queries database for webhook duplicate check and records event if prisma is active', async () => {
+      const findUniqueMock = vi.fn().mockResolvedValue({ processed: true });
       const mockPrisma = {
         webhookEvent: {
-          findUnique: vi.fn().mockResolvedValue({ processed: true }),
+          findUnique: findUniqueMock,
           create: vi.fn().mockResolvedValue({}),
         },
         order: {
@@ -406,7 +407,7 @@ describe('WebhooksService Integration', () => {
 
       const res = await dbWebhooks.processAnchorWebhook(payload, sig);
       expect(res.idempotent).toBe(true);
-      expect(mockPrisma.webhookEvent.findUnique).toHaveBeenCalled();
+      expect(findUniqueMock).toHaveBeenCalled();
     });
   });
 });

@@ -1,0 +1,22 @@
+# Global fallback owners
+* @lumenflow/core-team
+
+# Applications
+/apps/api/                @lumenflow/backend-team
+/apps/web/                @lumenflow/frontend-team
+/apps/worker/             @lumenflow/backend-team
+
+# Core Packages
+/packages/quote-engine/   @lumenflow/defi-team
+/packages/bridge-adapters/@lumenflow/crosschain-team
+/packages/anchor-client/  @lumenflow/stellar-team
+/packages/stellar/        @lumenflow/stellar-team
+/packages/shared-types/   @lumenflow/core-team
+/packages/ui/             @lumenflow/frontend-team
+/packages/config/         @lumenflow/devops-team
+
+# Infrastructure, CI & Security
+/.github/                 @lumenflow/devops-team
+/infra/                   @lumenflow/devops-team
+/scripts/                 @lumenflow/devops-team
+/docs/                    @lumenflow/core-team

@@ -123,7 +123,7 @@ describe('OrderStateMachineService', () => {
       };
 
       const mockPrisma = {
-        $transaction: vi.fn().mockImplementation(async (callback) => callback(mockTx)),
+        $transaction: vi.fn().mockImplementation((callback: (tx: typeof mockTx) => Promise<unknown>) => callback(mockTx)),
       } as unknown as PrismaService;
 
       const dbService = new OrderStateMachineService(mockPrisma);
@@ -168,7 +168,7 @@ describe('OrderStateMachineService', () => {
       };
 
       const mockPrisma = {
-        $transaction: vi.fn().mockImplementation(async (callback) => callback(mockTx)),
+        $transaction: vi.fn().mockImplementation((callback: (tx: typeof mockTx) => Promise<unknown>) => callback(mockTx)),
       } as unknown as PrismaService;
 
       const dbService = new OrderStateMachineService(mockPrisma);
@@ -189,7 +189,7 @@ describe('OrderStateMachineService', () => {
       };
 
       const mockPrisma = {
-        $transaction: vi.fn().mockImplementation(async (callback) => callback(mockTx)),
+        $transaction: vi.fn().mockImplementation((callback: (tx: typeof mockTx) => Promise<unknown>) => callback(mockTx)),
       } as unknown as PrismaService;
 
       const dbService = new OrderStateMachineService(mockPrisma);
