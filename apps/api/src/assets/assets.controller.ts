@@ -16,7 +16,7 @@ export class AssetsController {
     status: 200,
     description: 'List of supported assets with issuer and metadata.',
   })
-  getAssets(): SupportedAssetInfo[] {
+  async getAssets(): Promise<SupportedAssetInfo[]> {
     return this.assetsService.getSupportedAssets();
   }
 }

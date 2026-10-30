@@ -1,0 +1,243 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "Overview & Health",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "fillOpacity": 80, "gradientMode": "none" },
+          "unit": "reqps"
+        }
+      },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 1 },
+      "id": 2,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "title": "API Request Rate (req/s)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(lumenflow_http_requests_total[1m])) by (status_code)",
+          "legendFormat": "HTTP {{status_code}}"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.5 },
+              { "color": "red", "value": 1.5 }
+            ]
+          },
+          "unit": "s"
+        }
+      },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 1 },
+      "id": 3,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "title": "Quote Generation Latency (p95)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(lumenflow_quote_latency_seconds_bucket[5m])) by (le, type))",
+          "legendFormat": "{{type}} p95"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 90 },
+              { "color": "green", "value": 98 }
+            ]
+          },
+          "unit": "percent"
+        }
+      },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 1 },
+      "id": 4,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "title": "Swap Success Rate (5m)",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "100 * (sum(rate(lumenflow_swap_success_total[5m])) / (sum(rate(lumenflow_swap_success_total[5m])) + sum(rate(lumenflow_swap_failure_total[5m])) > 0 or 1))",
+          "legendFormat": "Swap Success %"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 },
+      "id": 5,
+      "title": "Cross-Chain Bridge & Offramp Operations",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 9 },
+      "id": 6,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "title": "Bridge Transfers (Success vs Failures)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(lumenflow_bridge_success_total[5m])) by (provider)",
+          "legendFormat": "{{provider}} Success"
+        },
+        {
+          "expr": "sum(rate(lumenflow_bridge_failure_total[5m])) by (provider)",
+          "legendFormat": "{{provider}} Failed"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 9 },
+      "id": 7,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "title": "Offramp Orders (Completed vs Failed)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(lumenflow_offramp_success_total[5m])) by (currency)",
+          "legendFormat": "{{currency}} Completed"
+        },
+        {
+          "expr": "sum(rate(lumenflow_offramp_failure_total[5m])) by (currency)",
+          "legendFormat": "{{currency}} Failed"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 9 },
+      "id": 8,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "title": "Stuck Bridge Transfers",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "sum(lumenflow_stuck_transfers_count)",
+          "legendFormat": "Stuck Transfers"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "id": 9,
+      "title": "Worker Queues & Reconciliation",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 17 },
+      "id": 10,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "title": "BullMQ Worker Queue Depth",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "lumenflow_queue_depth",
+          "legendFormat": "{{queue}} Depth"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 17 },
+      "id": 11,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "title": "Reconciliation Ledger Mismatches",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "sum(lumenflow_reconciliation_mismatches_total)",
+          "legendFormat": "Mismatches"
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["lumenflow", "stellar", "bridge", "offramp"],
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": { "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"] },
+  "timezone": "browser",
+  "title": "LumenFlow Platform Overview",
+  "uid": "lumenflow-overview",
+  "version": 1
+}

@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { Asset } from '@lumenflow/shared-types';
+import { RedisService } from '../redis/redis.service';
 
 export interface SupportedAssetInfo {
   asset: Asset;
@@ -11,6 +12,10 @@ export interface SupportedAssetInfo {
 
 @Injectable()
 export class AssetsService {
+  private readonly logger = new Logger(AssetsService.name);
+  private static readonly CACHE_KEY = 'cache:assets:supported';
+  private static readonly CACHE_TTL_SECONDS = 3600; // 1 hour TTL
+
   private readonly supportedAssets: SupportedAssetInfo[] = [
     {
       asset: { type: 'native', code: 'XLM' },
@@ -43,7 +48,34 @@ export class AssetsService {
     },
   ];
 
-  getSupportedAssets(): SupportedAssetInfo[] {
-    return this.supportedAssets;
+  constructor(private readonly redisService?: RedisService) {}
+
+  async getSupportedAssets(): Promise<SupportedAssetInfo[]> {
+    if (this.redisService) {
+      try {
+        const cached = await this.redisService.get(AssetsService.CACHE_KEY);
+        if (cached) {
+          return JSON.parse(cached) as SupportedAssetInfo[];
+        }
+      } catch (err) {
+        this.logger.debug(`Cache read error: ${String(err)}`);
+      }
+    }
+
+    const assets = this.supportedAssets;
+
+    if (this.redisService) {
+      try {
+        await this.redisService.set(
+          AssetsService.CACHE_KEY,
+          JSON.stringify(assets),
+          AssetsService.CACHE_TTL_SECONDS,
+        );
+      } catch (err) {
+        this.logger.debug(`Cache write error: ${String(err)}`);
+      }
+    }
+
+    return assets;
   }
 }

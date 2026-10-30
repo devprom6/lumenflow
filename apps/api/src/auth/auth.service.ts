@@ -35,6 +35,11 @@ export class AuthService {
     if (secret && StrKey.isValidEd25519SecretSeed(secret)) {
       this.serverKeypair = Keypair.fromSecret(secret);
     } else {
+      if (process.env['NODE_ENV'] === 'production') {
+        throw new Error(
+          'SEP10_SERVER_SECRET must be set to a valid Ed25519 seed in production.',
+        );
+      }
       // Deterministic fallback for test/dev environment
       const seed = crypto
         .createHash('sha256')

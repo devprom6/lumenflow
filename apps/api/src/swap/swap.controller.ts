@@ -6,6 +6,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { SwapService } from './swap.service';
 import type { Quote } from '@lumenflow/shared-types';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
@@ -26,6 +27,7 @@ export class SwapController {
   constructor(private readonly swapService: SwapService) {}
 
   @Post('quote')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Get a swap quote',
@@ -42,6 +44,7 @@ export class SwapController {
   }
 
   @Post('build')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Build an unsigned swap transaction',
@@ -64,6 +67,7 @@ export class SwapController {
   }
 
   @Post('submit')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Submit a signed swap transaction',

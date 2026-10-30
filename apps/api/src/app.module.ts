@@ -10,17 +10,20 @@ import { OfframpModule } from './offramp/offramp.module';
 import { BridgeModule } from './bridge/bridge.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { HealthModule } from './health/health.module';
+import { MetricsModule } from './metrics/metrics.module';
 import { RedisModule } from './redis/redis.module';
 import { RedisService } from './redis/redis.service';
 import { RedisThrottlerStorage } from './common/throttler/redis-throttler-storage';
 import { IdempotencyInterceptor } from './common/interceptors/idempotency.interceptor';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
+import { SecurityHeadersMiddleware } from './common/middleware/security-headers.middleware';
 
 @Module({
   imports: [
     DatabaseModule,
     RedisModule,
     HealthModule,
+    MetricsModule,
     AuthModule,
     AssetsModule,
     SwapModule,
@@ -57,6 +60,8 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
+    consumer
+      .apply(CorrelationIdMiddleware, SecurityHeadersMiddleware)
+      .forRoutes('*');
   }
 }

@@ -13,13 +13,15 @@
     "scripts:create-testnet-account": "node --experimental-strip-types scripts/create-testnet-account.ts",
     "scripts:seed-testnet-liquidity": "node --experimental-strip-types scripts/seed-testnet-liquidity.ts",
     "scripts:test-swap-flow": "node --experimental-strip-types scripts/test-swap-flow.ts",
-    "mock-anchor": "node --experimental-strip-types scripts/mock-anchor.ts"
+    "mock-anchor": "node --experimental-strip-types scripts/mock-anchor.ts",
+    "scan:secrets": "node --experimental-strip-types scripts/scan-secrets.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "21.2.3",
     "@commitlint/config-conventional": "21.2.3",
     "@stellar/stellar-sdk": "17.2.1",
     "@types/node": "22.15.17",
+    "@vitest/coverage-v8": "^5.0.5",
     "husky": "9.1.7",
     "lint-staged": "17.6.0",
     "prettier": "3.9.10",
@@ -33,7 +35,11 @@
     "pnpm": ">=9"
   },
   "lint-staged": {
-    "*.{ts,tsx}": ["prettier --write"],
-    "*.{js,json,md,yml,yaml}": ["prettier --write"]
+    "*.{ts,tsx}": [
+      "prettier --write"
+    ],
+    "*.{js,json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   }
 }

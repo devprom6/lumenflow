@@ -1,5 +1,6 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import {
@@ -17,6 +18,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('challenge')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Request SEP-10 wallet challenge',
@@ -35,6 +37,7 @@ export class AuthController {
   }
 
   @Post('verify')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Verify signed SEP-10 challenge',

@@ -1,6 +1,8 @@
 import { Queue, Worker, type Job } from 'bullmq';
 import Redis from 'ioredis';
 import { LoggingAlertHook } from './alerts/logging-alert-hook';
+import { SentryAlertHook } from './alerts/sentry-alert-hook';
+import type { AlertHook } from './alerts/alert-hook.interface';
 import {
   BridgeStatusProcessor,
   type BridgeStatusJobData,
@@ -24,6 +26,7 @@ import {
   type ReconciliationDataSource,
 } from './reconciliation/reconciliation.service';
 import { MockBridgeAdapter } from '@lumenflow/bridge-adapters';
+import { WorkerMetricsService } from './metrics/worker-metrics';
 
 export const QUEUES = {
   BRIDGE_STATUS: 'bridge-status',
@@ -33,13 +36,14 @@ export const QUEUES = {
 } as const;
 
 export class LumenFlowWorkerService {
-  public readonly alertHook: LoggingAlertHook;
+  public readonly alertHook: AlertHook;
   public readonly mockAdapter: MockBridgeAdapter;
   public readonly bridgeProcessor: BridgeStatusProcessor;
   public readonly payoutProcessor: PayoutFollowupProcessor;
   public readonly webhookProcessor: WebhookRetryProcessor;
   public readonly expiryProcessor: OrderExpiryProcessor;
   public readonly reconciliationService: ReconciliationService;
+  public readonly metricsService: WorkerMetricsService;
 
   private redisClient: Redis | null = null;
   private workers: Worker[] = [];
@@ -50,8 +54,9 @@ export class LumenFlowWorkerService {
     expiryStore: ExpiryStore,
     reconciliationSource: ReconciliationDataSource,
   ) {
-    this.alertHook = new LoggingAlertHook();
+    this.alertHook = new SentryAlertHook(new LoggingAlertHook());
     this.mockAdapter = new MockBridgeAdapter();
+    this.metricsService = new WorkerMetricsService();
 
     this.bridgeProcessor = new BridgeStatusProcessor(
       this.mockAdapter,
@@ -81,6 +86,13 @@ export class LumenFlowWorkerService {
   }
 
   public async start(): Promise<void> {
+    // Start worker metrics HTTP server
+    try {
+      await this.metricsService.startServer();
+    } catch (err) {
+      console.warn(`Could not start worker metrics server: ${String(err)}`);
+    }
+
     const redisUrl = process.env['REDIS_URL'] ?? 'redis://127.0.0.1:6379';
     try {
       this.redisClient = new Redis(redisUrl, {
@@ -98,7 +110,17 @@ export class LumenFlowWorkerService {
       const bridgeWorker = new Worker<BridgeStatusJobData>(
         QUEUES.BRIDGE_STATUS,
         async (job: Job<BridgeStatusJobData>) => {
-          return this.bridgeProcessor.process(job.data);
+          try {
+            const res = await this.bridgeProcessor.process(job.data);
+            this.metricsService.jobsProcessedTotal.labels(QUEUES.BRIDGE_STATUS, 'success').inc();
+            if (res.isStuck) {
+              this.metricsService.stuckTransfersCount.labels('MockBridge').inc();
+            }
+            return res;
+          } catch (err) {
+            this.metricsService.jobsProcessedTotal.labels(QUEUES.BRIDGE_STATUS, 'failed').inc();
+            throw err;
+          }
         },
         { connection },
       );
@@ -108,7 +130,14 @@ export class LumenFlowWorkerService {
       const payoutWorker = new Worker<PayoutFollowupJobData>(
         QUEUES.PAYOUT_FOLLOWUP,
         async (job: Job<PayoutFollowupJobData>) => {
-          return this.payoutProcessor.process(job.data);
+          try {
+            const res = await this.payoutProcessor.process(job.data);
+            this.metricsService.jobsProcessedTotal.labels(QUEUES.PAYOUT_FOLLOWUP, 'success').inc();
+            return res;
+          } catch (err) {
+            this.metricsService.jobsProcessedTotal.labels(QUEUES.PAYOUT_FOLLOWUP, 'failed').inc();
+            throw err;
+          }
         },
         { connection },
       );
@@ -118,7 +147,14 @@ export class LumenFlowWorkerService {
       const webhookWorker = new Worker<WebhookRetryJobData>(
         QUEUES.WEBHOOK_RETRY,
         async (job: Job<WebhookRetryJobData>) => {
-          return this.webhookProcessor.process(job.data);
+          try {
+            const res = await this.webhookProcessor.process(job.data);
+            this.metricsService.jobsProcessedTotal.labels(QUEUES.WEBHOOK_RETRY, 'success').inc();
+            return res;
+          } catch (err) {
+            this.metricsService.jobsProcessedTotal.labels(QUEUES.WEBHOOK_RETRY, 'failed').inc();
+            throw err;
+          }
         },
         { connection },
       );
@@ -128,7 +164,14 @@ export class LumenFlowWorkerService {
       const expiryWorker = new Worker(
         QUEUES.ORDER_EXPIRY,
         async () => {
-          return this.expiryProcessor.process();
+          try {
+            const res = await this.expiryProcessor.process();
+            this.metricsService.jobsProcessedTotal.labels(QUEUES.ORDER_EXPIRY, 'success').inc();
+            return res;
+          } catch (err) {
+            this.metricsService.jobsProcessedTotal.labels(QUEUES.ORDER_EXPIRY, 'failed').inc();
+            throw err;
+          }
         },
         { connection },
       );
@@ -141,6 +184,7 @@ export class LumenFlowWorkerService {
   }
 
   public async stop(): Promise<void> {
+    await this.metricsService.stopServer();
     for (const w of this.workers) {
       await w.close();
     }

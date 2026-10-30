@@ -8,6 +8,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import {
   OfframpQuoteRequestSchema,
@@ -30,6 +31,7 @@ export class OfframpController {
   constructor(private readonly offrampService: OfframpService) {}
 
   @Post('quote')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @UsePipes(new ZodValidationPipe(OfframpQuoteRequestSchema))
   @ApiOperation({ summary: 'Request offramp rate, fee breakdown, and rate-lock' })
   @ApiResponse({ status: 201, description: 'Guaranteed offramp quote' })
@@ -43,6 +45,7 @@ export class OfframpController {
   }
 
   @Post('orders')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @UsePipes(new ZodValidationPipe(OfframpOrderRequestSchema))
   @ApiOperation({ summary: 'Create offramp order and initiate interactive withdrawal' })
   @ApiResponse({ status: 201, description: 'Order created with interactive withdrawal window' })

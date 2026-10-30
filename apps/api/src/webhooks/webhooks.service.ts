@@ -41,9 +41,13 @@ export class WebhooksService {
     signatureHeader: string | undefined,
     rawBody: string | Record<string, unknown>,
   ): boolean {
-    const secret =
-      process.env['WEBHOOK_SIGNING_SECRET'] ??
-      'replace_me_with_a_strong_random_secret';
+    const defaultSecret = 'replace_me_with_a_strong_random_secret';
+    const secret = process.env['WEBHOOK_SIGNING_SECRET'] ?? defaultSecret;
+
+    if (process.env['NODE_ENV'] === 'production' && secret === defaultSecret) {
+      this.logger.error('CRITICAL: Default WEBHOOK_SIGNING_SECRET used in production!');
+      throw new Error('WEBHOOK_SIGNING_SECRET must be securely set in production.');
+    }
 
     if (!signatureHeader) {
       return false;
@@ -72,12 +76,33 @@ export class WebhooksService {
   }
 
   /**
+   * Validates webhook timestamp against clock drift to mitigate replay attacks.
+   */
+  assertValidTimestamp(timestampHeader?: string, maxDriftSeconds = 300): void {
+    if (!timestampHeader) return; // Optional header depending on provider specs
+    const ts = parseInt(timestampHeader, 10);
+    if (isNaN(ts)) {
+      throw new UnauthorizedException('Invalid webhook timestamp header');
+    }
+    // Handle both second and millisecond timestamps
+    const timestampMs = ts > 100000000000 ? ts : ts * 1000;
+    const now = Date.now();
+    const diffSeconds = Math.abs(now - timestampMs) / 1000;
+    if (diffSeconds > maxDriftSeconds) {
+      this.logger.warn(`Webhook timestamp drifted by ${diffSeconds}s (max allowed: ${maxDriftSeconds}s)`);
+      throw new UnauthorizedException('Webhook timestamp expired or drifted beyond acceptable window');
+    }
+  }
+
+  /**
    * Asserts signature is valid, throwing UnauthorizedException if not.
    */
   assertValidSignature(
     signatureHeader: string | undefined,
     body: Record<string, unknown>,
+    timestampHeader?: string,
   ): void {
+    this.assertValidTimestamp(timestampHeader);
     if (!this.verifySignature(signatureHeader, body)) {
       this.logger.warn(`Invalid or missing webhook signature: ${signatureHeader}`);
       throw new UnauthorizedException('Invalid or missing webhook signature');
@@ -170,8 +195,9 @@ export class WebhooksService {
   async processAnchorWebhook(
     payload: AnchorWebhookPayload,
     signatureHeader?: string,
+    timestampHeader?: string,
   ): Promise<WebhookProcessingResult> {
-    this.assertValidSignature(signatureHeader, payload);
+    this.assertValidSignature(signatureHeader, payload, timestampHeader);
 
     // Idempotency check
     if (await this.isDuplicate('anchor', payload.eventId)) {
@@ -286,8 +312,9 @@ export class WebhooksService {
   async processPayoutWebhook(
     payload: PayoutWebhookPayload,
     signatureHeader?: string,
+    timestampHeader?: string,
   ): Promise<WebhookProcessingResult> {
-    this.assertValidSignature(signatureHeader, payload);
+    this.assertValidSignature(signatureHeader, payload, timestampHeader);
 
     // Idempotency check
     if (await this.isDuplicate('payout', payload.eventId)) {
@@ -353,8 +380,9 @@ export class WebhooksService {
   async processBridgeWebhook(
     payload: BridgeWebhookPayload,
     signatureHeader?: string,
+    timestampHeader?: string,
   ): Promise<WebhookProcessingResult> {
-    this.assertValidSignature(signatureHeader, payload);
+    this.assertValidSignature(signatureHeader, payload, timestampHeader);
 
     const eventId = payload.eventId ?? `bridge-${payload.transferId}-${payload.status}`;
 

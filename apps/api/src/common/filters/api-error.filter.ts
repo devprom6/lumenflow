@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import type { ApiError } from '@lumenflow/shared-types';
+import * as Sentry from '@sentry/node';
 
 @Catch()
 export class ApiErrorFilter implements ExceptionFilter {
@@ -55,6 +56,21 @@ export class ApiErrorFilter implements ExceptionFilter {
     } else if (exception instanceof Error) {
       message = exception.message;
       this.logger.error(`Unhandled Exception: ${exception.message}`, exception.stack);
+    }
+
+    // Env-gated Sentry reporting for 5xx errors and unhandled exceptions
+    if (statusCode >= 500 && process.env['SENTRY_DSN']) {
+      try {
+        Sentry.withScope((scope) => {
+          scope.setTag('requestId', requestId);
+          scope.setExtra('url', request.url);
+          scope.setExtra('method', request.method);
+          scope.setExtra('code', code);
+          Sentry.captureException(exception);
+        });
+      } catch {
+        // Ignore Sentry dispatch failures
+      }
     }
 
     const errorPayload: ApiError = {

@@ -1,17 +1,62 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as Sentry from '@sentry/node';
 import { AppModule } from './app.module';
 import { ApiErrorFilter } from './common/filters/api-error.filter';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create(AppModule, {
-    cors: {
-      origin: '*',
-      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-      credentials: true,
+
+  // Initialize Sentry early if DSN is provided
+  const sentryDsn = process.env['SENTRY_DSN'];
+  if (sentryDsn && sentryDsn.trim() !== '') {
+    Sentry.init({
+      dsn: sentryDsn,
+      environment: process.env['NODE_ENV'] ?? 'development',
+      tracesSampleRate: process.env['NODE_ENV'] === 'production' ? 0.1 : 1.0,
+    });
+    logger.log('Sentry error tracking initialized for LumenFlow API');
+  }
+
+  const app = await NestFactory.create(AppModule);
+
+  // Strict CORS configuration
+  const allowedOriginsEnv = process.env['CORS_ALLOWED_ORIGINS'];
+  const allowedOrigins = allowedOriginsEnv
+    ? allowedOriginsEnv.split(',').map((o) => o.trim())
+    : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+
+  app.enableCors({
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      // Allow requests without Origin (like server-to-server curl, webhooks, mobile apps)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(
+          new Error(`Origin '${origin}' blocked by strict CORS policy.`),
+          false,
+        );
+      }
     },
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Idempotency-Key',
+      'x-webhook-signature',
+      'x-signature',
+      'x-webhook-timestamp',
+      'x-timestamp',
+      'x-correlation-id',
+      'x-admin-key',
+    ],
+    exposedHeaders: ['x-correlation-id', 'Idempotency-Key'],
+    credentials: true,
+    maxAge: 86400,
   });
 
   // Global exception filter for standardized ApiError JSON responses
@@ -43,6 +88,7 @@ async function bootstrap() {
     .addTag('Offramp', 'Anchor/payout offramp stubs (external providers)')
     .addTag('Webhooks', 'Provider webhook stubs')
     .addTag('Health', 'System and external service connectivity health check')
+    .addTag('Observability', 'Prometheus operational metrics exposition')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -57,6 +103,7 @@ async function bootstrap() {
       message: 'LumenFlow API server started',
       port,
       docsUrl: `http://localhost:${port}/docs`,
+      metricsUrl: `http://localhost:${port}/metrics`,
       environment: process.env['NODE_ENV'] ?? 'development',
     }),
   );

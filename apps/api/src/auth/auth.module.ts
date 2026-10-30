@@ -9,11 +9,17 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.register({
-      secret:
-        process.env['JWT_SECRET'] ??
-        'lumenflow_default_jwt_secret_for_dev_only',
-      signOptions: { expiresIn: '1h' },
+    JwtModule.registerAsync({
+      useFactory: () => {
+        const secret = process.env['JWT_SECRET'];
+        if (!secret && process.env['NODE_ENV'] === 'production') {
+          throw new Error('JWT_SECRET must be securely configured in production.');
+        }
+        return {
+          secret: secret ?? 'lumenflow_default_jwt_secret_for_dev_only',
+          signOptions: { expiresIn: '1h' },
+        };
+      },
     }),
   ],
   controllers: [AuthController],

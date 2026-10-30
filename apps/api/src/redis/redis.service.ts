@@ -1,11 +1,17 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import Redis from 'ioredis';
 
+interface CacheEntry {
+  value: string;
+  expiresAt?: number;
+}
+
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
   private client: Redis | null = null;
   private isConnected = false;
+  private readonly fallbackCache = new Map<string, CacheEntry>();
 
   async onModuleInit(): Promise<void> {
     const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
@@ -65,6 +71,67 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         error: err instanceof Error ? err.message : String(err),
       };
     }
+  }
+
+  /**
+   * Retrieves a string or JSON cached value from Redis or fallback memory.
+   */
+  async get(key: string): Promise<string | null> {
+    if (this.isAvailable() && this.client) {
+      try {
+        return await this.client.get(key);
+      } catch (err) {
+        this.logger.debug(`Redis get failed for ${key}: ${String(err)}`);
+      }
+    }
+
+    // In-memory fallback
+    const entry = this.fallbackCache.get(key);
+    if (!entry) return null;
+    if (entry.expiresAt && Date.now() > entry.expiresAt) {
+      this.fallbackCache.delete(key);
+      return null;
+    }
+    return entry.value;
+  }
+
+  /**
+   * Sets a value in Redis with optional TTL in seconds.
+   */
+  async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
+    if (this.isAvailable() && this.client) {
+      try {
+        if (ttlSeconds && ttlSeconds > 0) {
+          await this.client.set(key, value, 'EX', ttlSeconds);
+        } else {
+          await this.client.set(key, value);
+        }
+        return;
+      } catch (err) {
+        this.logger.debug(`Redis set failed for ${key}: ${String(err)}`);
+      }
+    }
+
+    // In-memory fallback
+    const entry: CacheEntry = { value };
+    if (ttlSeconds && ttlSeconds > 0) {
+      entry.expiresAt = Date.now() + ttlSeconds * 1000;
+    }
+    this.fallbackCache.set(key, entry);
+  }
+
+  /**
+   * Deletes a cached key.
+   */
+  async del(key: string): Promise<void> {
+    if (this.isAvailable() && this.client) {
+      try {
+        await this.client.del(key);
+      } catch (err) {
+        this.logger.debug(`Redis del failed for ${key}: ${String(err)}`);
+      }
+    }
+    this.fallbackCache.delete(key);
   }
 
   async onModuleDestroy(): Promise<void> {

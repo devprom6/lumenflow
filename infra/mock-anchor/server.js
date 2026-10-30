@@ -27,7 +27,7 @@ class MockAnchorServer {
         this.apiUrl =
             options.apiUrl ?? process.env['API_URL'] ?? 'http://localhost:4000';
         // Deterministic keypair for mock anchor server
-        this.anchorKeypair = stellar_sdk_1.Keypair.fromSecret('SDAMKODFDD2GNI4HGKKLV4R4P4X7F563B2Q2K3QJYYQ4745HUP26DDEV');
+        this.anchorKeypair = stellar_sdk_1.Keypair.fromRawEd25519Seed(Buffer.from('01234567890123456789012345678901'));
     }
     get baseUrl() {
         return `http://${this.host}:${this.port}`;

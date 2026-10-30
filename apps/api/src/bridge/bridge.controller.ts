@@ -5,11 +5,14 @@ import {
   Body,
   Param,
   UsePipes,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { BridgeService } from './bridge.service';
 import { BridgeSafeguardsService } from './bridge-safeguards.service';
+import { AdminAuthGuard } from './guards/admin-auth.guard';
 import {
   BridgeQuoteRequestDto,
   BridgeTransferRequestDto,
@@ -37,6 +40,7 @@ export class BridgeController {
   }
 
   @Post('quote')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @UsePipes(new ZodValidationPipe(BridgeQuoteRequestDto))
   @ApiOperation({ summary: 'Request cross-chain bridge quote with fee estimate' })
   @ApiResponse({ status: 200, description: 'Bridge quote generated successfully' })
@@ -47,6 +51,7 @@ export class BridgeController {
   }
 
   @Post('transfer')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @UsePipes(new ZodValidationPipe(BridgeTransferRequestDto))
   @ApiOperation({ summary: 'Initiate bridge transfer and construct unsigned transaction' })
   @ApiResponse({ status: 201, description: 'Unsigned transfer created for local wallet signing' })
@@ -65,9 +70,14 @@ export class BridgeController {
   }
 
   @Post('safeguards/kill-switch')
+  @UseGuards(AdminAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UsePipes(new ZodValidationPipe(KillSwitchToggleDto))
-  @ApiOperation({ summary: 'Toggle route or provider kill switch' })
+  @ApiOperation({ summary: 'Toggle route or provider kill switch (Admin only)' })
+  @ApiHeader({ name: 'x-admin-key', description: 'Admin API Key for safeguard controls' })
+  @ApiBearerAuth('JWT-auth')
   @ApiResponse({ status: 200, description: 'Safeguard updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized admin credentials' })
   toggleKillSwitch(@Body() body: KillSwitchToggle) {
     if (body.type === 'route') {
       this.safeguards.setRouteKillSwitch(body.target, body.killed);
@@ -83,9 +93,14 @@ export class BridgeController {
   }
 
   @Post('safeguards/limits')
+  @UseGuards(AdminAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UsePipes(new ZodValidationPipe(RouteLimitConfigDto))
-  @ApiOperation({ summary: 'Configure per-route min and max transfer limits' })
+  @ApiOperation({ summary: 'Configure per-route min and max transfer limits (Admin only)' })
+  @ApiHeader({ name: 'x-admin-key', description: 'Admin API Key for safeguard controls' })
+  @ApiBearerAuth('JWT-auth')
   @ApiResponse({ status: 200, description: 'Route limits updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized admin credentials' })
   configureLimits(@Body() body: RouteLimitConfig) {
     this.safeguards.setRouteLimit(body.routeId, {
       minAmount: body.minAmount,
