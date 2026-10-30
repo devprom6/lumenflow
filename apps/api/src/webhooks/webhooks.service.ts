@@ -225,6 +225,8 @@ export class WebhooksService {
       targetStatus = 'COMPLETED';
     } else if (anchorStatus === 'failed' || anchorStatus === 'error') {
       targetStatus = 'FAILED';
+    } else if (anchorStatus === 'expired') {
+      targetStatus = 'EXPIRED';
     }
 
     if (!targetStatus) {
@@ -283,6 +285,12 @@ export class WebhooksService {
         if (currentStatus !== 'COMPLETED' && currentStatus !== 'FAILED') {
           await this.stateMachine.transition(payload.orderId, 'FAILED', {
             reason: `Anchor reported failure: ${payload.status}`,
+          });
+        }
+      } else if (targetStatus === 'EXPIRED') {
+        if (currentStatus === 'AWAITING_SIGNATURE' || currentStatus === 'CREATED' || currentStatus === 'QUOTED') {
+          await this.stateMachine.transition(payload.orderId, 'EXPIRED', {
+            reason: 'Anchor transaction expired',
           });
         }
       }
@@ -351,6 +359,12 @@ export class WebhooksService {
         if (currentStatus !== 'COMPLETED' && currentStatus !== 'FAILED') {
           await this.stateMachine.transition(payload.orderId, 'FAILED', {
             reason: 'Payout rail reported transfer failure',
+          });
+        }
+      } else if (payload.status === 'REFUNDED') {
+        if (currentStatus === 'PROCESSING' || currentStatus === 'FAILED') {
+          await this.stateMachine.transition(payload.orderId, 'REFUNDED', {
+            reason: 'Payout refund confirmed by rail',
           });
         }
       }
@@ -479,6 +493,12 @@ export class WebhooksService {
         if (currentStatus !== 'COMPLETED' && currentStatus !== 'FAILED') {
           await this.stateMachine.transition(orderId, 'FAILED', {
             reason: payload.message ?? `Bridge transfer ${payload.status.toLowerCase()}`,
+          });
+        }
+      } else if (payload.status === 'REFUNDED') {
+        if (currentStatus === 'PROCESSING' || currentStatus === 'FAILED') {
+          await this.stateMachine.transition(orderId, 'REFUNDED', {
+            reason: payload.message ?? 'Bridge transfer refunded',
           });
         }
       }

@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { NotFoundException } from '@nestjs/common';
 import { OrderStateMachineService, InMemoryOrder } from '../order-state-machine.service';
 import { PrismaService } from '../../database/prisma.service';
 import { IllegalTransitionException } from '../errors/illegal-transition.error';
@@ -43,7 +44,7 @@ describe('OrderStateMachineService', () => {
     return order;
   }
 
-  describe('Legal Transitions', () => {
+  describe('Legal Transitions (In-Memory)', () => {
     for (const [from, allowedList] of Object.entries(LEGAL_TRANSITIONS) as Array<[OrderStatus, OrderStatus[]]>) {
       for (const to of allowedList) {
         it(`permits transition: ${from} -> ${to} and appends order_events`, async () => {
@@ -69,7 +70,7 @@ describe('OrderStateMachineService', () => {
     }
   });
 
-  describe('Illegal Transitions', () => {
+  describe('Illegal Transitions (In-Memory)', () => {
     for (const from of ALL_STATUSES) {
       const allowed = LEGAL_TRANSITIONS[from];
       const disallowed = ALL_STATUSES.filter((s) => !allowed.includes(s));
@@ -98,5 +99,116 @@ describe('OrderStateMachineService', () => {
 
     expect(order.stellarTxHash).toBe('abc123hash');
     expect(order.externalId).toBe('ext-456');
+  });
+
+  it('retrieves in-memory order correctly', () => {
+    const order = createTestOrder('mem-check-1', 'CREATED');
+    expect(service.getInMemoryOrder('mem-check-1')).toBe(order);
+    expect(service.getInMemoryOrder('non-existent')).toBeUndefined();
+  });
+
+  describe('Database Persistence Path ($transaction)', () => {
+    it('executes atomic update and order_event creation in database transaction', async () => {
+      const mockTx = {
+        order: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: 'db-order-1',
+            status: 'SUBMITTED',
+          }),
+          update: vi.fn().mockResolvedValue({}),
+        },
+        orderEvent: {
+          create: vi.fn().mockResolvedValue({}),
+        },
+      };
+
+      const mockPrisma = {
+        $transaction: vi.fn().mockImplementation(async (callback) => callback(mockTx)),
+      } as unknown as PrismaService;
+
+      const dbService = new OrderStateMachineService(mockPrisma);
+
+      const result = await dbService.transition('db-order-1', 'PROCESSING', {
+        reason: 'Payment confirmed on ledger',
+        stellarTxHash: 'tx_hash_stellar_123',
+        externalId: 'ext_anchor_999',
+      });
+
+      expect(result).toEqual({
+        id: 'db-order-1',
+        status: 'PROCESSING',
+        previousStatus: 'SUBMITTED',
+      });
+
+      expect(mockTx.order.update).toHaveBeenCalledWith({
+        where: { id: 'db-order-1' },
+        data: {
+          status: 'PROCESSING',
+          stellarTxHash: 'tx_hash_stellar_123',
+          externalId: 'ext_anchor_999',
+        },
+      });
+
+      expect(mockTx.orderEvent.create).toHaveBeenCalledWith({
+        data: {
+          orderId: 'db-order-1',
+          fromStatus: 'SUBMITTED',
+          toStatus: 'PROCESSING',
+          reason: 'Payment confirmed on ledger',
+          metadata: undefined,
+        },
+      });
+    });
+
+    it('throws NotFoundException when order is missing in database', async () => {
+      const mockTx = {
+        order: {
+          findUnique: vi.fn().mockResolvedValue(null),
+        },
+      };
+
+      const mockPrisma = {
+        $transaction: vi.fn().mockImplementation(async (callback) => callback(mockTx)),
+      } as unknown as PrismaService;
+
+      const dbService = new OrderStateMachineService(mockPrisma);
+
+      await expect(
+        dbService.transition('db-missing-id', 'PROCESSING'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws IllegalTransitionException when database order status transition is invalid', async () => {
+      const mockTx = {
+        order: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: 'db-order-completed',
+            status: 'COMPLETED',
+          }),
+        },
+      };
+
+      const mockPrisma = {
+        $transaction: vi.fn().mockImplementation(async (callback) => callback(mockTx)),
+      } as unknown as PrismaService;
+
+      const dbService = new OrderStateMachineService(mockPrisma);
+
+      await expect(
+        dbService.transition('db-order-completed', 'PROCESSING'),
+      ).rejects.toThrow(IllegalTransitionException);
+    });
+
+    it('propagates and logs unexpected database connection errors', async () => {
+      const mockPrisma = {
+        $transaction: vi.fn().mockRejectedValue(new Error('PostgreSQL connection timeout')),
+      } as unknown as PrismaService;
+
+      const dbService = new OrderStateMachineService(mockPrisma);
+
+      await expect(
+        dbService.transition('db-order-error', 'PROCESSING'),
+      ).rejects.toThrow('PostgreSQL connection timeout');
+    });
   });
 });

@@ -14,7 +14,7 @@ export type AnchorWebhookPayload = z.infer<typeof AnchorWebhookPayloadSchema>;
 export const PayoutWebhookPayloadSchema = z.object({
   eventId: z.string(),
   orderId: z.string().uuid(),
-  status: z.enum(['SUCCESS', 'FAILED', 'PENDING']),
+  status: z.enum(['SUCCESS', 'FAILED', 'PENDING', 'REFUNDED']),
   externalReference: z.string().optional(),
   fee: z.string().optional(),
   timestamp: z.string().optional(),
@@ -26,7 +26,7 @@ export const BridgeWebhookPayloadSchema = z.object({
   transferId: z.string(),
   orderId: z.string().uuid().optional(),
   provider: z.string().default('MockBridge'),
-  status: z.enum(['PENDING', 'IN_FLIGHT', 'COMPLETED', 'FAILED', 'STUCK']),
+  status: z.enum(['PENDING', 'IN_FLIGHT', 'COMPLETED', 'FAILED', 'STUCK', 'REFUNDED']),
   txHash: z.string().optional(),
   message: z.string().optional(),
   timestamp: z.string().optional(),
