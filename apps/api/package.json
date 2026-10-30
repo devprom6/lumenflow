@@ -49,7 +49,7 @@
   "devDependencies": {
     "@lumenflow/config": "workspace:*",
     "@nestjs/cli": "12.0.8",
-    "@nestjs/schematics": "12.0.7",
+    "@nestjs/schematics": "12.0.11",
     "@nestjs/testing": "12.1.3",
     "@types/express": "^5.0.0",
     "@types/node": "22.15.17",
