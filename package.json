@@ -16,7 +16,8 @@
     "scripts:seed-testnet-liquidity": "node --experimental-strip-types scripts/seed-testnet-liquidity.ts",
     "scripts:test-swap-flow": "node --experimental-strip-types scripts/test-swap-flow.ts",
     "mock-anchor": "node --experimental-strip-types scripts/mock-anchor.ts",
-    "scan:secrets": "node --experimental-strip-types scripts/scan-secrets.ts"
+    "scan:secrets": "node scripts/scan-secrets.mjs",
+    "postinstall": "pnpm --filter @lumenflow/api exec prisma generate"
   },
   "devDependencies": {
     "@commitlint/cli": "21.2.3",

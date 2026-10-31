@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "tsc --watch",
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "start": "node dist/main",
     "lint": "eslint \"{src,test}/**/*.ts\"",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "prisma generate && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:migrate": "prisma migrate dev",
