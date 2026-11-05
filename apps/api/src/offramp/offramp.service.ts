@@ -11,8 +11,9 @@ import {
   type OfframpQuoteRequest,
   type OfframpOrderRequest,
   type Order,
+  type PayoutAdapter,
 } from '@lumenflow/shared-types';
-import { AnchorClient } from '@lumenflow/anchor-client';
+import { AnchorClient, MockPayoutAdapter, HttpPayoutAdapter } from '@lumenflow/anchor-client';
 import { PrismaService } from '../database/prisma.service';
 import { OrderStateMachineService, type InMemoryOrder } from '../orders/order-state-machine.service';
 import { TieredLimitsService } from './tiered-limits.service';
@@ -29,6 +30,7 @@ export class OfframpService {
   private readonly logger = new Logger(OfframpService.name);
   private readonly quotesCache = new Map<string, OfframpQuote>();
   private readonly anchorClient: AnchorClient;
+  private readonly payoutAdapter: PayoutAdapter;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -37,6 +39,23 @@ export class OfframpService {
     private readonly complianceHook: MockComplianceHookService,
   ) {
     this.anchorClient = new AnchorClient({ timeoutMs: 3000, maxRetries: 1 });
+
+    // Use real HTTP payout adapter if env vars are configured
+    const payoutApiUrl = process.env['PAYOUT_PROVIDER_API_URL'];
+    const payoutApiKey = process.env['PAYOUT_PROVIDER_API_KEY'];
+
+    if (payoutApiUrl && payoutApiKey) {
+      this.payoutAdapter = new HttpPayoutAdapter({
+        name: process.env['PAYOUT_PROVIDER_NAME'] ?? 'HttpPayout',
+        apiUrl: payoutApiUrl,
+        secretKey: payoutApiKey,
+        defaultFee: process.env['PAYOUT_PROVIDER_DEFAULT_FEE'] ?? '1.50',
+      });
+      this.logger.log(`HttpPayoutAdapter registered for provider '${process.env['PAYOUT_PROVIDER_NAME'] ?? 'HttpPayout'}'`);
+    } else {
+      this.payoutAdapter = new MockPayoutAdapter({ fixedFee: '1.50' });
+      this.logger.warn('PAYOUT_PROVIDER_API_URL/KEY not set — using MockPayoutAdapter');
+    }
   }
 
   /**
