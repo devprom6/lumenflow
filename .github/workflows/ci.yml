@@ -129,7 +129,6 @@ jobs:
   docker-build-check:
     name: Dockerfile Build Check
     runs-on: ubuntu-latest
-    # Run in parallel with ci — catches Dockerfile errors on every PR without waiting for tests
     steps:
       - uses: actions/checkout@v4
 
@@ -141,7 +140,6 @@ jobs:
           docker build \
             --file infra/docker/Dockerfile.api \
             --tag lumenflow/api:ci-check \
-            --no-cache \
             .
 
       - name: Build Web Dockerfile (no push)
@@ -149,7 +147,6 @@ jobs:
           docker build \
             --file infra/docker/Dockerfile.web \
             --tag lumenflow/web:ci-check \
-            --no-cache \
             .
 
       - name: Build Worker Dockerfile (no push)
@@ -157,5 +154,4 @@ jobs:
           docker build \
             --file infra/docker/Dockerfile.worker \
             --tag lumenflow/worker:ci-check \
-            --no-cache \
             .
