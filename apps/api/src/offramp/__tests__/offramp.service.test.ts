@@ -24,12 +24,13 @@ describe('OfframpService Integration', () => {
     // Mock ExchangeRatesService — returns a deterministic fallback rate so tests
     // never make real HTTP calls and produce stable assertions.
     exchangeRates = {
-      getRate: async (_currency: string) => ({
-        rate: 1550,
-        currency: 'NGN',
-        source: 'fallback' as const,
-        fetchedAt: new Date().toISOString(),
-      }),
+      getRate: (_currency: string) =>
+        Promise.resolve({
+          rate: 1550,
+          currency: 'NGN',
+          source: 'fallback' as const,
+          fetchedAt: new Date().toISOString(),
+        }),
     } as unknown as ExchangeRatesService;
 
     offrampService = new OfframpService(

@@ -63,7 +63,7 @@ describe('HttpBridgeAdapter', () => {
     it('returns a properly mapped BridgeQuote', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
+        json: () => ({
           quoteId: 'q-123',
           fromAmount: '100.0000000',
           toAmount: '99.5000000',
@@ -94,7 +94,7 @@ describe('HttpBridgeAdapter', () => {
     it('returns an UnsignedTransfer with deposit address and memo', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
+        json: () => ({
           transferId: 't-456',
           unsignedTransaction: 'base64xdr...',
           depositAddress: 'GADEPOSIT...',
@@ -130,7 +130,7 @@ describe('HttpBridgeAdapter', () => {
     it('maps COMPLETED status correctly', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
+        json: () => ({
           transferId: 't-456',
           status: 'completed',
           fromTxHash: '0xabc',
@@ -148,7 +148,7 @@ describe('HttpBridgeAdapter', () => {
     it('maps FAILED status correctly', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
+        json: () => ({
           transferId: 't-456',
           status: 'failed',
           message: 'Insufficient liquidity',
@@ -163,7 +163,7 @@ describe('HttpBridgeAdapter', () => {
     it('maps PENDING status correctly', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
+        json: () => ({
           transferId: 't-456',
           status: 'pending',
           confirmations: 3,

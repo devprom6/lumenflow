@@ -2,12 +2,8 @@ import { Injectable, Logger, NotImplementedException } from '@nestjs/common';
 import type { KmsService } from './kms.interface';
 
 /**
- * AWS KMS implementation stub.
- * To activate: set AWS_KMS_KEY_ID and AWS_REGION env vars,
- * then install @aws-sdk/client-kms and implement the methods below.
- *
- * Example installation:
- *   pnpm --filter api add @aws-sdk/client-kms
+ * AWS KMS stub. Set AWS_KMS_KEY_ID and AWS_REGION, then install
+ * @aws-sdk/client-kms and implement the methods to activate.
  */
 @Injectable()
 export class AwsKmsService implements KmsService {
@@ -19,39 +15,29 @@ export class AwsKmsService implements KmsService {
     const keyId = process.env['AWS_KMS_KEY_ID'];
     const region = process.env['AWS_REGION'];
 
-    if (!keyId) {
-      throw new Error('AWS_KMS_KEY_ID environment variable is required for AwsKmsService.');
-    }
-    if (!region) {
-      throw new Error('AWS_REGION environment variable is required for AwsKmsService.');
-    }
+    if (!keyId) throw new Error('AWS_KMS_KEY_ID is required for AwsKmsService.');
+    if (!region) throw new Error('AWS_REGION is required for AwsKmsService.');
 
     this.keyId = keyId;
     this.region = region;
+    this.logger.log(`AwsKmsService — keyId=${this.keyId}, region=${this.region}`);
+  }
 
-    this.logger.log(
-      `AwsKmsService initialised — keyId=${this.keyId}, region=${this.region}`,
+  sign(_keyId: string, _data: Buffer): Promise<Buffer> {
+    throw new NotImplementedException(
+      'Install @aws-sdk/client-kms and implement AwsKmsService.sign()',
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async sign(_keyId: string, _data: Buffer): Promise<Buffer> {
+  verify(_keyId: string, _data: Buffer, _signature: Buffer): Promise<boolean> {
     throw new NotImplementedException(
-      'Configure AWS_KMS_KEY_ID and install @aws-sdk/client-kms to enable AWS KMS',
+      'Install @aws-sdk/client-kms and implement AwsKmsService.verify()',
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async verify(_keyId: string, _data: Buffer, _signature: Buffer): Promise<boolean> {
+  getPublicKey(_keyId: string): Promise<string> {
     throw new NotImplementedException(
-      'Configure AWS_KMS_KEY_ID and install @aws-sdk/client-kms to enable AWS KMS',
-    );
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async getPublicKey(_keyId: string): Promise<string> {
-    throw new NotImplementedException(
-      'Configure AWS_KMS_KEY_ID and install @aws-sdk/client-kms to enable AWS KMS',
+      'Install @aws-sdk/client-kms and implement AwsKmsService.getPublicKey()',
     );
   }
 }

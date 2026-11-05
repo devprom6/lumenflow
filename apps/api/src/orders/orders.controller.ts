@@ -122,7 +122,7 @@ export class OrdersController {
     if (startDate) dateFilter['gte'] = new Date(startDate);
     if (endDate) dateFilter['lte'] = new Date(endDate);
 
-    let orders: Array<Record<string, unknown>> = [];
+    let orders: Array<Record<string, unknown>>;
     try {
       orders = await this.prisma.order.findMany({
         where: {
@@ -147,17 +147,17 @@ export class OrdersController {
     const header = 'orderId,type,status,sourceAmount,sourceAsset,destinationAsset,createdAt\n';
     const rows = orders
       .map((o) => {
-        const src = (o['sourceAsset'] as { code?: string })?.code ?? '';
-        const dst = (o['destinationAsset'] as { code?: string })?.code ?? '';
+        const src = (o['sourceAsset'] as { code?: string } | undefined)?.code ?? '';
+        const dst = (o['destinationAsset'] as { code?: string } | undefined)?.code ?? '';
         const created =
           o['createdAt'] instanceof Date
             ? o['createdAt'].toISOString()
-            : String(o['createdAt'] ?? '');
+            : typeof o['createdAt'] === 'string' ? o['createdAt'] : '';
         return [
-          String(o['id'] ?? ''),
-          String(o['type'] ?? ''),
-          String(o['status'] ?? ''),
-          String(o['sourceAmount'] ?? ''),
+          typeof o['id'] === 'string' ? o['id'] : '',
+          typeof o['type'] === 'string' ? o['type'] : '',
+          typeof o['status'] === 'string' ? o['status'] : '',
+          typeof o['sourceAmount'] === 'string' ? o['sourceAmount'] : '',
           src,
           dst,
           created,

@@ -35,7 +35,7 @@ describe('HttpPayoutAdapter', () => {
     it('returns a PayoutResult with mapped status', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
+        json: () => ({
           payoutId: 'pay-123',
           status: 'success',
           reference: 'ref-abc',
@@ -54,7 +54,7 @@ describe('HttpPayoutAdapter', () => {
     it('maps processing status correctly', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
+        json: () => ({
           payoutId: 'pay-456',
           status: 'processing',
           reference: 'ref-def',
@@ -68,19 +68,19 @@ describe('HttpPayoutAdapter', () => {
     it('sends bank transfer fields in request body', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ payoutId: 'p1', status: 'success' }),
+        json: () => ({ payoutId: 'p1', status: 'success' }),
       });
 
       await adapter.initiatePayout(samplePayoutParams);
 
-      const callArgs = mockFetch.mock.calls[0];
-      const body = JSON.parse(callArgs[1].body as string);
-      expect(body.bank_name).toBe('GTBank');
-      expect(body.account_number).toBe('0123456789');
-      expect(body.account_name).toBe('Test User');
-      expect(body.amount).toBe('50000.00');
-      expect(body.currency).toBe('NGN');
-      expect(body.reference).toBe(samplePayoutParams.orderId);
+      const callArgs = mockFetch.mock.calls[0] as [string, RequestInit];
+      const body = JSON.parse(callArgs[1].body as string) as Record<string, unknown>;
+      expect(body['bank_name']).toBe('GTBank');
+      expect(body['account_number']).toBe('0123456789');
+      expect(body['account_name']).toBe('Test User');
+      expect(body['amount']).toBe('50000.00');
+      expect(body['currency']).toBe('NGN');
+      expect(body['reference']).toBe(samplePayoutParams.orderId);
     });
   });
 
@@ -88,7 +88,7 @@ describe('HttpPayoutAdapter', () => {
     it('returns the current status of a payout', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
+        json: () => ({
           payoutId: 'pay-123',
           status: 'completed',
           reference: 'ref-abc',
@@ -105,7 +105,7 @@ describe('HttpPayoutAdapter', () => {
     it('maps failed status correctly', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
+        json: () => ({
           payoutId: 'pay-789',
           status: 'failed',
           message: 'Invalid account number',

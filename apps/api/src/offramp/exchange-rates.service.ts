@@ -44,23 +44,22 @@ export class ExchangeRatesService {
   async getRate(currency: string): Promise<ExchangeRateResponse> {
     const upperCurrency = currency.toUpperCase();
 
-    // Try fetching from real API if configured
     const rateApiUrl = process.env['EXCHANGE_RATE_API_URL'];
     const rateApiKey = process.env['EXCHANGE_RATE_API_KEY'];
 
-    if (rateApiUrl && this.isCacheFresh()) {
-      const cached = this.cache.rates.get(upperCurrency);
-      if (cached !== undefined) {
-        return {
-          currency: upperCurrency,
-          rate: cached,
-          source: 'api',
-          fetchedAt: new Date(this.cache.fetchedAt).toISOString(),
-        };
-      }
-    }
-
     if (rateApiUrl) {
+      if (this.isCacheFresh()) {
+        const cached = this.cache.rates.get(upperCurrency);
+        if (cached !== undefined) {
+          return {
+            currency: upperCurrency,
+            rate: cached,
+            source: 'api',
+            fetchedAt: new Date(this.cache.fetchedAt).toISOString(),
+          };
+        }
+      }
+
       try {
         const rates = await this.fetchRatesFromApi(rateApiUrl, rateApiKey);
         this.cache = { rates, fetchedAt: Date.now() };
@@ -79,7 +78,8 @@ export class ExchangeRatesService {
       }
     }
 
-    // Fallback to static rates
+    // Fallback to static rates (no network call — use await to satisfy require-await)
+    await Promise.resolve();
     const fallbackRate = FALLBACK_RATES[upperCurrency] ?? 1.0;
     return {
       currency: upperCurrency,

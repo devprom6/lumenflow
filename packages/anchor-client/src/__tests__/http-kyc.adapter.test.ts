@@ -23,7 +23,7 @@ describe('HttpKycAdapter', () => {
     it('maps provider response to KycCustomer', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
+        json: () => ({
           id: 'kyc-123',
           userId: 'user-456',
           status: 'verified',
@@ -41,7 +41,7 @@ describe('HttpKycAdapter', () => {
     it('maps pending status correctly', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ id: 'kyc-1', userId: 'u1', status: 'in_review' }),
+        json: () => ({ id: 'kyc-1', userId: 'u1', status: 'in_review' }),
       });
 
       const customer = await adapter.getCustomerStatus('u1');
@@ -51,7 +51,7 @@ describe('HttpKycAdapter', () => {
     it('maps rejected status correctly', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ id: 'kyc-1', userId: 'u1', status: 'rejected', flags: ['mismatch'] }),
+        json: () => ({ id: 'kyc-1', userId: 'u1', status: 'rejected', flags: ['mismatch'] }),
       });
 
       const customer = await adapter.getCustomerStatus('u1');
@@ -64,7 +64,7 @@ describe('HttpKycAdapter', () => {
     it('submits verification data and returns upgraded tier for national_id', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
+        json: () => ({
           id: 'kyc-new',
           userId: 'u1',
           status: 'pending',
@@ -83,7 +83,7 @@ describe('HttpKycAdapter', () => {
     it('upgrades to tier 3 for passport/biometric', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({
+        json: () => ({
           id: 'kyc-new',
           userId: 'u1',
           status: 'verified',
@@ -112,15 +112,15 @@ describe('HttpKycAdapter', () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ id: 'kyc-1', userId: 'u1', status: 'pending' }),
+        json: () => ({ id: 'kyc-1', userId: 'u1', status: 'pending' }),
       });
 
       await adapterWithCallback.submitVerification('u1', { full_name: 'Test' });
 
-      const callArgs = mockFetch.mock.calls[0];
-      const body = JSON.parse(callArgs[1].body as string);
-      expect(body.partnerId).toBe('partner-123');
-      expect(body.callbackUrl).toBe('https://lumenflow.app/kyc-callback');
+      const callArgs = mockFetch.mock.calls[0] as [string, RequestInit];
+      const body = JSON.parse(callArgs[1].body as string) as Record<string, unknown>;
+      expect(body['partnerId']).toBe('partner-123');
+      expect(body['callbackUrl']).toBe('https://lumenflow.app/kyc-callback');
     });
   });
 });

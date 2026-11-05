@@ -31,11 +31,11 @@ export class AdminController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'status', required: false, type: String })
   async getOrders(
-    @Query('page') page = 1,
-    @Query('limit') limit = 20,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
     @Query('status') status?: string,
   ) {
-    return this.admin.getOrders(Number(page), Number(limit), status);
+    return this.admin.getOrders(parseInt(page, 10), parseInt(limit, 10), status);
   }
 
   @Get('orders/:id')

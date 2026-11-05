@@ -16,7 +16,7 @@ export class TotpService {
     counter.writeBigInt64BE(BigInt(step));
     const keyBuffer = Buffer.from(secret, 'base64url');
     const hmac = crypto.createHmac('sha1', keyBuffer).update(counter).digest();
-    const offset = hmac[hmac.length - 1]! & 0x0f;
+    const offset = (hmac[hmac.length - 1] ?? 0) & 0x0f;
     const code = (hmac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000;
     return String(code).padStart(6, '0');
   }

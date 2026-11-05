@@ -106,14 +106,14 @@ export class HttpBridgeAdapter implements BridgeAdapter {
     try {
       const data = await this.request<ProviderRoute[]>('GET', '/routes');
       this.cachedRoutes = data.map((r) => ({
-        id: String(r.id ?? `${r.fromChain ?? r.source_chain}-${r.toChain ?? r.destination_chain}-${r.fromAsset ?? r.source_asset}`),
-        fromChain: String(r.fromChain ?? r.source_chain ?? ''),
-        toChain: String(r.toChain ?? r.destination_chain ?? ''),
-        fromAsset: String(r.fromAsset ?? r.source_asset ?? ''),
-        toAsset: String(r.toAsset ?? r.destination_asset ?? ''),
-        minAmount: String(r.minAmount ?? r.min_amount ?? '1.0'),
-        maxAmount: String(r.maxAmount ?? r.max_amount ?? '1000000.0'),
-        estimatedDurationSeconds: Number(r.estimatedDurationSeconds ?? r.estimated_duration_seconds ?? 300),
+        id: r.id ?? `${r.fromChain ?? r.source_chain}-${r.toChain ?? r.destination_chain}-${r.fromAsset ?? r.source_asset}`,
+        fromChain: r.fromChain ?? r.source_chain ?? '',
+        toChain: r.toChain ?? r.destination_chain ?? '',
+        fromAsset: r.fromAsset ?? r.source_asset ?? '',
+        toAsset: r.toAsset ?? r.destination_asset ?? '',
+        minAmount: r.minAmount ?? r.min_amount ?? '1.0',
+        maxAmount: r.maxAmount ?? r.max_amount ?? '1000000.0',
+        estimatedDurationSeconds: r.estimatedDurationSeconds ?? r.estimated_duration_seconds ?? 300,
         enabled: r.enabled ?? true,
       }));
       return this.cachedRoutes;

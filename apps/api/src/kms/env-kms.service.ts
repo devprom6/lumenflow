@@ -4,8 +4,8 @@ import * as crypto from 'node:crypto';
 import type { KmsService } from './kms.interface';
 
 /**
- * Environment-based KMS implementation for development and staging.
- * Loads the Ed25519 keypair from the SEP10_SERVER_SECRET environment variable.
+ * Environment-based KMS for development and staging.
+ * Loads the Ed25519 keypair from SEP10_SERVER_SECRET env var.
  * DO NOT use in production — use AwsKmsService or another HSM-backed implementation.
  */
 @Injectable()
@@ -25,50 +25,34 @@ export class EnvKmsService implements KmsService {
           'SEP10_SERVER_SECRET must be set to a valid Ed25519 seed in production.',
         );
       }
-      // Deterministic dev fallback — never carries real value
       const seed = crypto
         .createHash('sha256')
         .update('lumenflow-testnet-sep10-server-key')
         .digest();
       this.keypair = Keypair.fromRawEd25519Seed(seed);
       this.logger.warn(
-        'EnvKmsService: SEP10_SERVER_SECRET not set — using deterministic dev fallback key. ' +
-          'Set SEP10_SERVER_SECRET in production.',
+        'EnvKmsService: SEP10_SERVER_SECRET not set — using deterministic dev fallback.',
       );
     }
   }
 
-  /**
-   * Signs the provided data buffer with the Ed25519 keypair.
-   * keyId is accepted for interface compatibility but only one key is managed here.
-   */
-  async sign(keyId: string, data: Buffer): Promise<Buffer> {
-    this.logger.debug(`sign() called for keyId=${keyId}`);
-    const signature = this.keypair.sign(data);
-    return Buffer.from(signature);
+  // Interface requires Promise return types so callers can use await uniformly,
+  // but the underlying crypto is synchronous. Using Promise.resolve avoids
+  // @typescript-eslint/require-await while keeping the interface contract.
+
+  sign(_keyId: string, data: Buffer): Promise<Buffer> {
+    return Promise.resolve(Buffer.from(this.keypair.sign(data)));
   }
 
-  /**
-   * Verifies an Ed25519 signature against the provided data.
-   */
-  async verify(
-    keyId: string,
-    data: Buffer,
-    signature: Buffer,
-  ): Promise<boolean> {
-    this.logger.debug(`verify() called for keyId=${keyId}`);
+  verify(_keyId: string, data: Buffer, signature: Buffer): Promise<boolean> {
     try {
-      return this.keypair.verify(data, signature);
+      return Promise.resolve(this.keypair.verify(data, signature));
     } catch {
-      return false;
+      return Promise.resolve(false);
     }
   }
 
-  /**
-   * Returns the Stellar public key (G... address) for the managed keypair.
-   */
-  async getPublicKey(keyId: string): Promise<string> {
-    this.logger.debug(`getPublicKey() called for keyId=${keyId}`);
-    return this.keypair.publicKey();
+  getPublicKey(_keyId: string): Promise<string> {
+    return Promise.resolve(this.keypair.publicKey());
   }
 }

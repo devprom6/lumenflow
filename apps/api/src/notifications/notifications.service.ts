@@ -26,10 +26,11 @@ export class NotificationsService {
       // Always include a logging-only fallback so notification calls never throw
       this.providers.push({
         name: 'LoggingFallback',
-        send: async (payload) => {
+        send: (payload) => {
           this.logger.log(
             `[NOTIFICATION] userId=${payload.userId} title="${payload.title}" body="${payload.body}"`,
           );
+          return Promise.resolve();
         },
       });
     }
@@ -78,7 +79,7 @@ export class NotificationsService {
   private async fanOut(payload: NotificationPayload): Promise<void> {
     await Promise.allSettled(
       this.providers.map((provider) =>
-        provider.send(payload).catch((err) => {
+        provider.send(payload).catch((err: unknown) => {
           this.logger.error(
             `Notification provider '${provider.name}' failed for userId=${payload.userId}: ${String(err)}`,
           );
