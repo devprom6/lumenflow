@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Inject,
   NotFoundException,
   BadRequestException,
   ForbiddenException,
@@ -18,7 +19,7 @@ import { PrismaService } from '../database/prisma.service';
 import { OrderStateMachineService, type InMemoryOrder } from '../orders/order-state-machine.service';
 import { TieredLimitsService } from './tiered-limits.service';
 import { ExchangeRatesService } from './exchange-rates.service';
-import { MockComplianceHookService } from '../compliance/mock-compliance-hook.service';
+import { type ComplianceHook, COMPLIANCE_HOOK } from '../compliance/compliance.interface';
 
 export interface CreateOfframpOrderResult {
   order: Order;
@@ -38,7 +39,8 @@ export class OfframpService {
     private readonly stateMachine: OrderStateMachineService,
     private readonly tieredLimits: TieredLimitsService,
     private readonly exchangeRates: ExchangeRatesService,
-    private readonly complianceHook: MockComplianceHookService,
+    @Inject(COMPLIANCE_HOOK)
+    private readonly complianceHook: ComplianceHook,
   ) {
     this.anchorClient = new AnchorClient({ timeoutMs: 3000, maxRetries: 1 });
 
