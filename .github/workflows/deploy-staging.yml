@@ -6,7 +6,7 @@ on:
 
 concurrency:
   group: deploy-staging
-  cancel-in-progress: false   # never cancel an in-progress deploy
+  cancel-in-progress: false
 
 env:
   NODE_VERSION: '22'
@@ -19,7 +19,10 @@ jobs:
   build-images:
     name: Build & Push Images
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    # Skip the entire deploy if AWS credentials are not configured yet.
+    # Add AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and ECR_REGISTRY to
+    # repository secrets to enable automatic deployment on merge to main.
+    if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
     outputs:
       image_tag: ${{ steps.meta.outputs.image_tag }}
       ecr_registry: ${{ steps.login-ecr.outputs.registry }}
@@ -79,6 +82,7 @@ jobs:
     name: Run DB Migrations
     runs-on: ubuntu-latest
     needs: build-images
+    if: ${{ needs.build-images.result == 'success' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -103,6 +107,7 @@ jobs:
     name: Deploy to ECS
     runs-on: ubuntu-latest
     needs: migrate
+    if: ${{ needs.migrate.result == 'success' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -114,7 +119,6 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
-        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Update API service
@@ -143,6 +147,7 @@ jobs:
     name: Smoke Test
     runs-on: ubuntu-latest
     needs: deploy-ecs
+    if: ${{ needs.deploy-ecs.result == 'success' }}
     steps:
       - name: Wait for API to be healthy
         run: |

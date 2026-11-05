@@ -20,7 +20,8 @@ jobs:
   build-images:
     name: Build & Push Images
     runs-on: ubuntu-latest
-    environment: production           # requires manual approval in GitHub Environments
+    environment: production
+    if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
     outputs:
       image_tag: ${{ steps.meta.outputs.image_tag }}
       ecr_registry: ${{ steps.login-ecr.outputs.registry }}
