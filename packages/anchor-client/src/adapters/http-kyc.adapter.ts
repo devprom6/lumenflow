@@ -1,10 +1,3 @@
-/**
- * HTTP-based KYC Adapter
- *
- * Implements the KycAdapter interface against real third-party KYC/AML
- * identity verification provider APIs (e.g. Smile ID, Sumsub, Onfido).
- */
-
 import {
   type KycAdapter,
   type KycCustomer,
@@ -48,8 +41,8 @@ export class HttpKycAdapter implements KycAdapter {
   readonly name: string;
   private readonly apiUrl: string;
   private readonly apiKey: string;
-  private readonly partnerId?: string;
-  private readonly callbackUrl?: string;
+  private readonly partnerId: string | undefined;
+  private readonly callbackUrl: string | undefined;
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
   private readonly defaultTier: KycTier;
@@ -85,12 +78,9 @@ export class HttpKycAdapter implements KycAdapter {
     userId: string,
     verificationData: Record<string, unknown>,
   ): Promise<KycCustomer> {
-    const body: Record<string, unknown> = {
-      userId,
-      ...verificationData,
-    };
-    if (this.partnerId) body['partnerId'] = this.partnerId;
-    if (this.callbackUrl) body['callbackUrl'] = this.callbackUrl;
+    const body: Record<string, unknown> = { userId, ...verificationData };
+    if (this.partnerId !== undefined) body['partnerId'] = this.partnerId;
+    if (this.callbackUrl !== undefined) body['callbackUrl'] = this.callbackUrl;
 
     const result = await this.request<ProviderCustomerResponse>(
       'POST',
@@ -127,17 +117,16 @@ export class HttpKycAdapter implements KycAdapter {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
-        const res = await fetch(`${this.apiUrl}${path}`, {
-          method,
-          headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': this.apiKey,
-            ...(this.partnerId ? { 'X-Partner-Id': this.partnerId } : {}),
-          },
-          body: body ? JSON.stringify(body) : undefined,
-          signal: controller.signal,
-        });
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'X-API-Key': this.apiKey,
+        };
+        if (this.partnerId !== undefined) headers['X-Partner-Id'] = this.partnerId;
 
+        const init: RequestInit = { method, headers, signal: controller.signal };
+        if (body !== undefined) init.body = JSON.stringify(body);
+
+        const res = await fetch(`${this.apiUrl}${path}`, init);
         clearTimeout(timeout);
 
         if (!res.ok) {

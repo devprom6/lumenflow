@@ -12,9 +12,11 @@ COPY packages/ ./packages/
 COPY apps/web/ ./apps/web/
 RUN pnpm install --frozen-lockfile
 
-# ── Stage 2: Build ──────────────────────────────────────────────────────
+# ── Stage 2: Build workspace packages first, then the web app ──────────
 FROM deps AS builder
 ENV NEXT_TELEMETRY_DISABLED=1
+RUN pnpm --filter @lumenflow/shared-types build \
+ && pnpm --filter @lumenflow/ui build
 RUN pnpm --filter @lumenflow/web build
 
 # ── Stage 3: Production image ───────────────────────────────────────────

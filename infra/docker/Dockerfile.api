@@ -1,19 +1,26 @@
 # ── LumenFlow API (NestJS) ──────────────────────────────────────────────
-# Multi-stage build: install all workspace deps → build → prune to prod deps
+# Multi-stage build: install → build workspace packages → build API → prune to prod
 
 FROM node:22-slim AS base
 RUN corepack enable
 WORKDIR /app
 
-# ── Stage 1: Install all dependencies (including devDeps for build) ──────
+# ── Stage 1: Install all dependencies ──────────────────────────────────
 FROM base AS deps
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json turbo.json tsconfig.scripts.json ./
 COPY packages/ ./packages/
 COPY apps/api/ ./apps/api/
 RUN pnpm install --frozen-lockfile
 
-# ── Stage 2: Build ──────────────────────────────────────────────────────
+# ── Stage 2: Build workspace packages first, then the API ──────────────
 FROM deps AS builder
+# Build all workspace packages (shared-types, stellar, bridge-adapters, etc.)
+# so their compiled output exists for the API's tsc to import.
+RUN pnpm --filter @lumenflow/shared-types build \
+ && pnpm --filter @lumenflow/quote-engine build \
+ && pnpm --filter @lumenflow/stellar build \
+ && pnpm --filter @lumenflow/bridge-adapters build \
+ && pnpm --filter @lumenflow/anchor-client build
 RUN pnpm --filter @lumenflow/api exec prisma generate
 RUN pnpm --filter @lumenflow/api build
 
@@ -21,7 +28,6 @@ RUN pnpm --filter @lumenflow/api build
 FROM base AS runner
 ENV NODE_ENV=production
 
-# Create non-root user
 RUN groupadd --gid 1001 lumenflow && \
     useradd --uid 1001 --gid lumenflow --shell /bin/bash lumenflow
 

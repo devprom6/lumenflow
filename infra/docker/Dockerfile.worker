@@ -12,8 +12,12 @@ COPY packages/ ./packages/
 COPY apps/worker/ ./apps/worker/
 RUN pnpm install --frozen-lockfile
 
-# ── Stage 2: Build ──────────────────────────────────────────────────────
+# ── Stage 2: Build workspace packages first, then the worker ───────────
 FROM deps AS builder
+RUN pnpm --filter @lumenflow/shared-types build \
+ && pnpm --filter @lumenflow/stellar build \
+ && pnpm --filter @lumenflow/bridge-adapters build \
+ && pnpm --filter @lumenflow/anchor-client build
 RUN pnpm --filter @lumenflow/worker build
 
 # ── Stage 3: Production image ───────────────────────────────────────────

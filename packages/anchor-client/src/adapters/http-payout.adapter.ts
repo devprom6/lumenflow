@@ -1,11 +1,3 @@
-/**
- * HTTP-based Payout Adapter
- *
- * Implements the PayoutAdapter interface against real third-party payout
- * provider REST APIs (e.g. Paystack, Flutterwave, direct bank integrations).
- * Supports bank transfers and mobile money disbursements.
- */
-
 import {
   type PayoutAdapter,
   type PayoutParams,
@@ -14,17 +6,11 @@ import {
 } from '@lumenflow/shared-types';
 
 export interface HttpPayoutAdapterConfig {
-  /** Provider name (e.g. "Paystack", "Flutterwave") */
   name: string;
-  /** Base URL of the payout provider API */
   apiUrl: string;
-  /** Secret key for authentication */
   secretKey: string;
-  /** Request timeout in ms (default 15 000) */
   timeoutMs?: number;
-  /** Max retries for transient failures (default 3) */
   maxRetries?: number;
-  /** Default fee for payouts (used as fallback) */
   defaultFee?: string;
 }
 
@@ -33,15 +19,6 @@ interface ProviderPayoutResponse {
   status: string;
   reference?: string;
   fee?: string;
-  message?: string;
-}
-
-interface ProviderPayoutStatusResponse {
-  payoutId: string;
-  status: string;
-  reference?: string;
-  fee?: string;
-  message?: string;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -74,16 +51,13 @@ export class HttpPayoutAdapter implements PayoutAdapter {
   }
 
   async initiatePayout(params: PayoutParams): Promise<PayoutResult> {
-    // Build provider-specific request body
     const body: Record<string, unknown> = {
       reference: params.orderId,
       amount: params.amount,
       currency: params.currency,
-      // Bank transfer fields
       bank_name: params.recipient.bankName,
       account_number: params.recipient.accountNumber,
       account_name: params.recipient.accountName,
-      // Mobile money fields
       phone: params.recipient.phone,
       memo: params.memo,
     };
@@ -99,7 +73,7 @@ export class HttpPayoutAdapter implements PayoutAdapter {
   }
 
   async getPayoutStatus(payoutId: string): Promise<PayoutResult> {
-    const data = await this.request<ProviderPayoutStatusResponse>(
+    const data = await this.request<ProviderPayoutResponse>(
       'GET',
       `/payouts/${encodeURIComponent(payoutId)}/status`,
     );
@@ -126,16 +100,17 @@ export class HttpPayoutAdapter implements PayoutAdapter {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
-        const res = await fetch(`${this.apiUrl}${path}`, {
+        const init: RequestInit = {
           method,
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${this.secretKey}`,
           },
-          body: body ? JSON.stringify(body) : undefined,
           signal: controller.signal,
-        });
+        };
+        if (body !== undefined) init.body = JSON.stringify(body);
 
+        const res = await fetch(`${this.apiUrl}${path}`, init);
         clearTimeout(timeout);
 
         if (!res.ok) {

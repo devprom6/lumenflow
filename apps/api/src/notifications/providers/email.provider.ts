@@ -3,19 +3,17 @@ import type { NotificationProvider, NotificationPayload } from '../notification.
 
 /**
  * Email notification provider.
- *
- * Uses SendGrid if SENDGRID_API_KEY is set, otherwise attempts a direct SMTP
- * connection using SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / SMTP_FROM.
- * Degrades gracefully (warn log only) if neither is configured.
+ * Uses SendGrid if SENDGRID_API_KEY is set, otherwise falls back to raw SMTP.
+ * Degrades gracefully (warn log) if neither is configured.
  */
 export class EmailNotificationProvider implements NotificationProvider {
   readonly name = 'Email';
   private readonly logger = new Logger(EmailNotificationProvider.name);
-  private readonly sendgridKey?: string;
-  private readonly smtpHost?: string;
+  private readonly sendgridKey: string | undefined;
+  private readonly smtpHost: string | undefined;
   private readonly smtpPort: number;
-  private readonly smtpUser?: string;
-  private readonly smtpPass?: string;
+  private readonly smtpUser: string | undefined;
+  private readonly smtpPass: string | undefined;
   private readonly smtpFrom: string;
 
   constructor() {
@@ -34,23 +32,28 @@ export class EmailNotificationProvider implements NotificationProvider {
       return;
     }
 
-    if (this.sendgridKey) {
-      await this.sendViaSendGrid(to, payload.title, payload.body);
-    } else if (this.smtpHost) {
+    if (this.sendgridKey !== undefined) {
+      await this.sendViaSendGrid(to, payload.title, payload.body, this.sendgridKey);
+    } else if (this.smtpHost !== undefined) {
       await this.sendViaSmtp(to, payload.title, payload.body);
     } else {
       this.logger.warn(
         `[EMAIL NOT SENT] No SENDGRID_API_KEY or SMTP_HOST configured. ` +
-        `Would have sent to ${to}: "${payload.title}"`,
+          `Would have sent to ${to}: "${payload.title}"`,
       );
     }
   }
 
-  private async sendViaSendGrid(to: string, subject: string, body: string): Promise<void> {
+  private async sendViaSendGrid(
+    to: string,
+    subject: string,
+    body: string,
+    apiKey: string,
+  ): Promise<void> {
     const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${this.sendgridKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -69,33 +72,42 @@ export class EmailNotificationProvider implements NotificationProvider {
   }
 
   private async sendViaSmtp(to: string, subject: string, body: string): Promise<void> {
-    // Simple SMTP implementation using Node.js net module
     const { createConnection } = await import('node:net');
+    const host = this.smtpHost as string; // guarded by caller
+    const user = this.smtpUser;
+    const pass = this.smtpPass;
+    const from = this.smtpFrom;
+    const port = this.smtpPort;
 
     return new Promise((resolve, reject) => {
-      const socket = createConnection({ host: this.smtpHost!, port: this.smtpPort });
+      const socket = createConnection({ host, port });
       let buffer = '';
       let step = 0;
 
       const send = (cmd: string) => socket.write(cmd + '\r\n');
-
       const b64 = (s: string) => Buffer.from(s).toString('base64');
 
-      const steps = [
-        () => send(`EHLO lumenflow.app`),
+      const steps: Array<() => void> = [
+        () => send('EHLO lumenflow.app'),
         () => {
-          if (this.smtpUser) send('AUTH LOGIN');
-          else { step++; steps[step]?.(); }
+          if (user !== undefined) {
+            send('AUTH LOGIN');
+          } else {
+            step++;
+            steps[step]?.();
+          }
         },
-        () => send(b64(this.smtpUser!)),
-        () => send(b64(this.smtpPass ?? '')),
-        () => send(`MAIL FROM:<${this.smtpFrom}>`),
+        () => send(b64(user ?? '')),
+        () => send(b64(pass ?? '')),
+        () => send(`MAIL FROM:<${from}>`),
         () => send(`RCPT TO:<${to}>`),
         () => send('DATA'),
-        () => send(
-          `From: ${this.smtpFrom}\r\nTo: ${to}\r\nSubject: ${subject}\r\n\r\n${body}\r\n.`,
-        ),
-        () => { send('QUIT'); socket.end(); resolve(); },
+        () => send(`From: ${from}\r\nTo: ${to}\r\nSubject: ${subject}\r\n\r\n${body}\r\n.`),
+        () => {
+          send('QUIT');
+          socket.end();
+          resolve();
+        },
       ];
 
       socket.on('data', (chunk: Buffer) => {
@@ -114,7 +126,6 @@ export class EmailNotificationProvider implements NotificationProvider {
       });
 
       socket.on('error', reject);
-      socket.on('connect', () => { /* wait for banner */ });
     });
   }
 }
