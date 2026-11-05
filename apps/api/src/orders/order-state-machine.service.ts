@@ -1,7 +1,9 @@
 import {
+import {
   Injectable,
   NotFoundException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import {
   isLegalTransition,
@@ -9,6 +11,7 @@ import {
 } from '@lumenflow/shared-types';
 import { PrismaService } from '../database/prisma.service';
 import { IllegalTransitionException } from './errors/illegal-transition.error';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export interface TransitionOptions {
   reason?: string | undefined;
@@ -48,7 +51,10 @@ export class OrderStateMachineService {
   // In-memory fallback map for test environments where Postgres is not running
   private readonly inMemoryOrders = new Map<string, InMemoryOrder>();
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly notifications?: NotificationsService,
+  ) {}
 
   /**
    * Register an in-memory order for testing or disconnected environments
@@ -93,6 +99,12 @@ export class OrderStateMachineService {
       });
 
       this.logger.log(`Order ${orderId} transitioned: ${fromStatus} -> ${toStatus}`);
+
+      // Fire notification for terminal states (non-blocking)
+      if (toStatus === 'COMPLETED' || toStatus === 'FAILED') {
+        void this.notifications?.notifyOrderStatus(memOrder.userId, orderId, toStatus);
+      }
+
       return { id: orderId, status: toStatus, previousStatus: fromStatus };
     }
 
@@ -134,6 +146,12 @@ export class OrderStateMachineService {
         });
 
         this.logger.log(`Order ${orderId} transitioned: ${fromStatus} -> ${toStatus}`);
+
+        // Fire notification for terminal states (non-blocking)
+        if (toStatus === 'COMPLETED' || toStatus === 'FAILED') {
+          void this.notifications?.notifyOrderStatus(order.userId, orderId, toStatus);
+        }
+
         return { id: orderId, status: toStatus, previousStatus: fromStatus };
       });
     } catch (err) {

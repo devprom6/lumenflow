@@ -1,5 +1,13 @@
-import { Controller, Get, Param, Query, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  NotFoundException,
+  Res,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { PrismaService } from '../database/prisma.service';
 import { OrderStateMachineService } from './order-state-machine.service';
 
@@ -122,8 +130,71 @@ export class OrdersController {
               createdAt: new Date().toISOString(),
             },
           ],
+  @Get('transactions/export')
+  @ApiOperation({ summary: 'Export transaction history as CSV or JSON' })
+  @ApiQuery({ name: 'userId', required: false })
+  @ApiQuery({ name: 'format', required: false, enum: ['csv', 'json'] })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  async exportTransactions(
+    @Query('userId') userId: string | undefined,
+    @Query('format') format = 'csv',
+    @Query('startDate') startDate: string | undefined,
+    @Query('endDate') endDate: string | undefined,
+    @Res() res: Response,
+  ): Promise<void> {
+    const dateFilter: Record<string, Date> = {};
+    if (startDate) dateFilter['gte'] = new Date(startDate);
+    if (endDate) dateFilter['lte'] = new Date(endDate);
+
+    let orders: Array<Record<string, unknown>> = [];
+    try {
+      orders = await this.prisma.order.findMany({
+        where: {
+          ...(userId ? { userId } : {}),
+          ...(Object.keys(dateFilter).length ? { createdAt: dateFilter } : {}),
         },
-      ];
+        orderBy: { createdAt: 'desc' },
+      });
+    } catch {
+      orders = [];
     }
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+
+    if (format === 'json') {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename=transactions-${dateStr}.json`);
+      res.send(JSON.stringify(orders, null, 2));
+      return;
+    }
+
+    // CSV export
+    const header = 'orderId,type,status,sourceAmount,sourceAsset,destinationAsset,createdAt\n';
+    const rows = orders
+      .map((o) => {
+        const src = (o['sourceAsset'] as { code?: string })?.code ?? '';
+        const dst = (o['destinationAsset'] as { code?: string })?.code ?? '';
+        const created =
+          o['createdAt'] instanceof Date
+            ? o['createdAt'].toISOString()
+            : String(o['createdAt'] ?? '');
+        return [
+          String(o['id'] ?? ''),
+          String(o['type'] ?? ''),
+          String(o['status'] ?? ''),
+          String(o['sourceAmount'] ?? ''),
+          src,
+          dst,
+          created,
+        ]
+          .map((v) => `"${v.replace(/"/g, '""')}"`)
+          .join(',');
+      })
+      .join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=transactions-${dateStr}.csv`);
+    res.send(header + rows);
   }
 }

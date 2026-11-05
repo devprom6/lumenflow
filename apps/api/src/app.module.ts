@@ -12,6 +12,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { HealthModule } from './health/health.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { AdminModule } from './admin/admin.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { RedisModule } from './redis/redis.module';
 import { RedisService } from './redis/redis.service';
 import { RedisThrottlerStorage } from './common/throttler/redis-throttler-storage';
@@ -26,6 +27,7 @@ import { SecurityHeadersMiddleware } from './common/middleware/security-headers.
     HealthModule,
     MetricsModule,
     AdminModule,
+    NotificationsModule,
     AuthModule,
     AssetsModule,
     SwapModule,
