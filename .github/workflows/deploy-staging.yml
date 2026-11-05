@@ -1,0 +1,154 @@
+name: Deploy — Staging
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false   # never cancel an in-progress deploy
+
+env:
+  NODE_VERSION: '22'
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+  ECS_CLUSTER: lumenflow-staging
+
+jobs:
+  # ── 1. Build + push Docker images ──────────────────────────────────────
+  build-images:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+      ecr_registry: ${{ steps.login-ecr.outputs.registry }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: meta
+        run: echo "image_tag=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/Dockerfile.api
+          push: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/lumenflow/api:staging-${{ steps.meta.outputs.image_tag }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Build and push Web image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/Dockerfile.web
+          push: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/lumenflow/web:staging-${{ steps.meta.outputs.image_tag }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+      - name: Build and push Worker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/Dockerfile.worker
+          push: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/lumenflow/worker:staging-${{ steps.meta.outputs.image_tag }}
+          cache-from: type=gha,scope=worker
+          cache-to: type=gha,mode=max,scope=worker
+
+  # ── 2. Run DB migrations ────────────────────────────────────────────────
+  migrate:
+    name: Run DB Migrations
+    runs-on: ubuntu-latest
+    needs: build-images
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @lumenflow/api exec prisma generate
+
+      - name: Run migrations
+        run: pnpm --filter @lumenflow/api exec prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+
+  # ── 3. Deploy to ECS Fargate ────────────────────────────────────────────
+  deploy-ecs:
+    name: Deploy to ECS
+    runs-on: ubuntu-latest
+    needs: migrate
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Update API service
+        run: |
+          bash infra/scripts/ecs-update-service.sh \
+            ${{ env.ECS_CLUSTER }} \
+            lumenflow-staging-api \
+            "${{ needs.build-images.outputs.ecr_registry }}/lumenflow/api:staging-${{ needs.build-images.outputs.image_tag }}"
+
+      - name: Update Web service
+        run: |
+          bash infra/scripts/ecs-update-service.sh \
+            ${{ env.ECS_CLUSTER }} \
+            lumenflow-staging-web \
+            "${{ needs.build-images.outputs.ecr_registry }}/lumenflow/web:staging-${{ needs.build-images.outputs.image_tag }}"
+
+      - name: Update Worker service
+        run: |
+          bash infra/scripts/ecs-update-service.sh \
+            ${{ env.ECS_CLUSTER }} \
+            lumenflow-staging-worker \
+            "${{ needs.build-images.outputs.ecr_registry }}/lumenflow/worker:staging-${{ needs.build-images.outputs.image_tag }}"
+
+  # ── 4. Smoke test ───────────────────────────────────────────────────────
+  smoke-test:
+    name: Smoke Test
+    runs-on: ubuntu-latest
+    needs: deploy-ecs
+    steps:
+      - name: Wait for API to be healthy
+        run: |
+          curl \
+            --retry 8 \
+            --retry-delay 15 \
+            --retry-connrefused \
+            --fail \
+            https://staging-api.lumenflow.app/health

@@ -1,24 +1,44 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import {
   DEFAULT_KYC_TIER_LIMITS,
+  type KycAdapter,
   type KycTier,
   type KycTierLimit,
 } from '@lumenflow/shared-types';
-import { MockKycAdapter } from '@lumenflow/anchor-client';
+import { MockKycAdapter, HttpKycAdapter } from '@lumenflow/anchor-client';
 import { PrismaService } from '../database/prisma.service';
 
 @Injectable()
 export class TieredLimitsService {
+  private readonly logger = new Logger(TieredLimitsService.name);
   private readonly limits: Record<KycTier, KycTierLimit> = {
     ...DEFAULT_KYC_TIER_LIMITS,
   };
-  private readonly kycAdapter: MockKycAdapter;
+  private readonly kycAdapter: KycAdapter;
 
   constructor(private readonly prisma: PrismaService) {
-    this.kycAdapter = new MockKycAdapter({ defaultTier: 1 });
+    // Use real HTTP KYC adapter if env vars are configured
+    const kycApiUrl = process.env['KYC_PROVIDER_API_URL'];
+    const kycApiKey = process.env['KYC_PROVIDER_API_KEY'];
+
+    if (kycApiUrl && kycApiKey) {
+      this.kycAdapter = new HttpKycAdapter({
+        name: process.env['KYC_PROVIDER_NAME'] ?? 'HttpKyc',
+        apiUrl: kycApiUrl,
+        apiKey: kycApiKey,
+        // Only pass optional fields when they have actual values
+        ...(process.env['KYC_PROVIDER_PARTNER_ID'] ? { partnerId: process.env['KYC_PROVIDER_PARTNER_ID'] } : {}),
+        ...(process.env['KYC_PROVIDER_CALLBACK_URL'] ? { callbackUrl: process.env['KYC_PROVIDER_CALLBACK_URL'] } : {}),
+        defaultTier: 1,
+      });
+      this.logger.log(`HttpKycAdapter registered for provider '${process.env['KYC_PROVIDER_NAME'] ?? 'HttpKyc'}'`);
+    } else {
+      this.kycAdapter = new MockKycAdapter({ defaultTier: 1 });
+      this.logger.warn('KYC_PROVIDER_API_URL/KEY not set — using MockKycAdapter');
+    }
   }
 
-  getKycAdapter(): MockKycAdapter {
+  getKycAdapter(): KycAdapter {
     return this.kycAdapter;
   }
 

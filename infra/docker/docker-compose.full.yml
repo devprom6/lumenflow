@@ -1,0 +1,127 @@
+# docker-compose.full.yml — Full-stack local development
+# Builds and runs api, web, worker alongside postgres + redis + mock-anchor
+#
+# Usage:
+#   docker compose -f infra/docker/docker-compose.full.yml up --build
+#
+# Environment:
+#   Copy .env.example files from each app, or set vars in a .env at repo root.
+
+services:
+  # ── Infrastructure ────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: lumenflow_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lumenflow
+      POSTGRES_PASSWORD: lumenflow_dev_password
+      POSTGRES_DB: lumenflow_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lumenflow -d lumenflow_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: lumenflow_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mock-anchor:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.mock-anchor
+    container_name: lumenflow_mock_anchor
+    restart: unless-stopped
+    ports:
+      - "4001:4001"
+    environment:
+      MOCK_ANCHOR_PORT: "4001"
+
+  # ── Application Services ──────────────────────────────────────────────
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+    container_name: lumenflow_api
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mock-anchor:
+        condition: service_started
+    environment:
+      NODE_ENV: development
+      PORT: "4000"
+      DATABASE_URL: postgresql://lumenflow:lumenflow_dev_password@postgres:5432/lumenflow_dev
+      REDIS_URL: redis://redis:6379
+      STELLAR_NETWORK_PASSPHRASE: "Test SDF Network ; September 2015"
+      STELLAR_HORIZON_URL: https://horizon-testnet.stellar.org
+      STELLAR_RPC_URL: https://soroban-testnet.stellar.org
+      ANCHOR_HOME_DOMAIN: lumenflow.app
+      MOCK_ANCHOR_PORT: "4001"
+      JWT_SECRET: dev-jwt-secret-change-in-production
+      WEBHOOK_SIGNING_SECRET: dev-webhook-secret-change-in-production
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.worker
+    container_name: lumenflow_worker
+    restart: unless-stopped
+    ports:
+      - "9102:9102"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://lumenflow:lumenflow_dev_password@postgres:5432/lumenflow_dev
+      REDIS_URL: redis://redis:6379
+      STELLAR_NETWORK_PASSPHRASE: "Test SDF Network ; September 2015"
+      STELLAR_HORIZON_URL: https://horizon-testnet.stellar.org
+      STELLAR_RPC_URL: https://soroban-testnet.stellar.org
+
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.web
+    container_name: lumenflow_web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      NEXT_PUBLIC_STELLAR_NETWORK: TESTNET
+      NEXT_PUBLIC_HORIZON_URL: https://horizon-testnet.stellar.org
+      NEXT_PUBLIC_RPC_URL: https://soroban-testnet.stellar.org
+
+volumes:
+  postgres_data:
+  redis_data:

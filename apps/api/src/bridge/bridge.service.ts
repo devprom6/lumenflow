@@ -16,6 +16,7 @@ import type {
 import {
   BridgeAdapterRegistry,
   MockBridgeAdapter,
+  HttpBridgeAdapter,
 } from '@lumenflow/bridge-adapters';
 import { PrismaService } from '../database/prisma.service';
 import {
@@ -44,7 +45,25 @@ export class BridgeService {
     this.registry = new BridgeAdapterRegistry();
     this.mockAdapter = new MockBridgeAdapter({ name: 'MockBridge', feePercent: 0.0025 });
     this.registry.register(this.mockAdapter, 10, true);
-    this.logger.log('BridgeService initialized with MockBridgeAdapter in BridgeAdapterRegistry');
+
+    // Register real HTTP bridge adapter if configured via env vars
+    const bridgeApiUrl = process.env['BRIDGE_PROVIDER_API_URL'];
+    const bridgeApiKey = process.env['BRIDGE_PROVIDER_API_KEY'];
+    const bridgeProviderName = process.env['BRIDGE_PROVIDER_NAME'] ?? 'HttpBridge';
+
+    if (bridgeApiUrl && bridgeApiKey) {
+      const httpAdapter = new HttpBridgeAdapter({
+        name: bridgeProviderName,
+        apiUrl: bridgeApiUrl,
+        apiKey: bridgeApiKey,
+        feePercent: Number(process.env['BRIDGE_PROVIDER_FEE_PERCENT'] ?? 0.003),
+        maxRetries: Number(process.env['BRIDGE_PROVIDER_MAX_RETRIES'] ?? 3),
+      });
+      this.registry.register(httpAdapter, 20, true);
+      this.logger.log(`HttpBridgeAdapter registered for provider '${bridgeProviderName}' at ${bridgeApiUrl}`);
+    } else {
+      this.logger.warn('BRIDGE_PROVIDER_API_URL/KEY not set — using MockBridgeAdapter only');
+    }
   }
 
   public getRegistry(): BridgeAdapterRegistry {

@@ -1,0 +1,6 @@
+[workspace]
+members = ["fee-splitter", "escrow"]
+resolver = "2"
+
+[workspace.dependencies]
+soroban-sdk = { version = "21.0.0", features = ["testutils"] }

@@ -7,4 +7,5 @@ export * from './sep24';
 export * from './anchor-client';
 export * from './adapters/mock-kyc.adapter';
 export * from './adapters/mock-payout.adapter';
-export * from './mock-anchor/server';
+export * from './adapters/http-kyc.adapter';
+export * from './adapters/http-payout.adapter';
