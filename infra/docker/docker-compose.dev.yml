@@ -32,6 +32,18 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── Mock Anchor (SEP-1/10/12/24 simulator) ───────────────────────────
+  mock-anchor:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.mock-anchor
+    container_name: lumenflow_mock_anchor
+    restart: unless-stopped
+    ports:
+      - "4001:4001"
+    environment:
+      MOCK_ANCHOR_PORT: "4001"
+
 volumes:
   postgres_data:
   redis_data:
