@@ -8,6 +8,13 @@ export type {
 } from './mock-bridge.adapter';
 
 export {
+  HttpBridgeAdapter,
+} from './adapters/http-bridge.adapter';
+export type {
+  HttpBridgeAdapterConfig,
+} from './adapters/http-bridge.adapter';
+
+export {
   BridgeAdapterRegistry,
 } from './registry';
 export type {
