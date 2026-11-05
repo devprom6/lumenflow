@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import {
   isLegalTransition,
@@ -9,6 +10,7 @@ import {
 } from '@lumenflow/shared-types';
 import { PrismaService } from '../database/prisma.service';
 import { IllegalTransitionException } from './errors/illegal-transition.error';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export interface TransitionOptions {
   reason?: string | undefined;
@@ -45,14 +47,13 @@ export interface InMemoryOrder {
 @Injectable()
 export class OrderStateMachineService {
   private readonly logger = new Logger(OrderStateMachineService.name);
-  // In-memory fallback map for test environments where Postgres is not running
   private readonly inMemoryOrders = new Map<string, InMemoryOrder>();
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly notifications?: NotificationsService,
+  ) {}
 
-  /**
-   * Register an in-memory order for testing or disconnected environments
-   */
   setInMemoryOrder(order: InMemoryOrder): void {
     this.inMemoryOrders.set(order.id, order);
   }
@@ -61,15 +62,11 @@ export class OrderStateMachineService {
     return this.inMemoryOrders.get(orderId);
   }
 
-  /**
-   * Enforces legal transitions and atomically updates order state + writes append-only order_events row.
-   */
   async transition(
     orderId: string,
     toStatus: OrderStatus,
     options: TransitionOptions = {},
   ): Promise<{ id: string; status: OrderStatus; previousStatus: OrderStatus }> {
-    // 1. Check in-memory store first (for unit/integration tests without live DB)
     const memOrder = this.inMemoryOrders.get(orderId);
     if (memOrder) {
       const fromStatus = memOrder.status;
@@ -93,15 +90,17 @@ export class OrderStateMachineService {
       });
 
       this.logger.log(`Order ${orderId} transitioned: ${fromStatus} -> ${toStatus}`);
+
+      if (toStatus === 'COMPLETED' || toStatus === 'FAILED') {
+        void this.notifications?.notifyOrderStatus(memOrder.userId, orderId, toStatus);
+      }
+
       return { id: orderId, status: toStatus, previousStatus: fromStatus };
     }
 
-    // 2. Database transaction
     try {
       return await this.prisma.$transaction(async (tx) => {
-        const order = await tx.order.findUnique({
-          where: { id: orderId },
-        });
+        const order = await tx.order.findUnique({ where: { id: orderId } });
 
         if (!order) {
           throw new NotFoundException(`Order with id '${orderId}' not found.`);
@@ -112,7 +111,6 @@ export class OrderStateMachineService {
           throw new IllegalTransitionException(fromStatus, toStatus);
         }
 
-        // Atomically update order status
         await tx.order.update({
           where: { id: orderId },
           data: {
@@ -122,7 +120,6 @@ export class OrderStateMachineService {
           },
         });
 
-        // Atomically append order_events row (APPEND-ONLY)
         await tx.orderEvent.create({
           data: {
             orderId,
@@ -134,6 +131,11 @@ export class OrderStateMachineService {
         });
 
         this.logger.log(`Order ${orderId} transitioned: ${fromStatus} -> ${toStatus}`);
+
+        if (toStatus === 'COMPLETED' || toStatus === 'FAILED') {
+          void this.notifications?.notifyOrderStatus(order.userId, orderId, toStatus);
+        }
+
         return { id: orderId, status: toStatus, previousStatus: fromStatus };
       });
     } catch (err) {

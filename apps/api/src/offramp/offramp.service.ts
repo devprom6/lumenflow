@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Inject,
   NotFoundException,
   BadRequestException,
   ForbiddenException,
@@ -11,12 +12,14 @@ import {
   type OfframpQuoteRequest,
   type OfframpOrderRequest,
   type Order,
+  type PayoutAdapter,
 } from '@lumenflow/shared-types';
-import { AnchorClient } from '@lumenflow/anchor-client';
+import { AnchorClient, MockPayoutAdapter, HttpPayoutAdapter } from '@lumenflow/anchor-client';
 import { PrismaService } from '../database/prisma.service';
 import { OrderStateMachineService, type InMemoryOrder } from '../orders/order-state-machine.service';
 import { TieredLimitsService } from './tiered-limits.service';
-import { MockComplianceHookService } from '../compliance/mock-compliance-hook.service';
+import { ExchangeRatesService } from './exchange-rates.service';
+import { type ComplianceHook, COMPLIANCE_HOOK } from '../compliance/compliance.interface';
 
 export interface CreateOfframpOrderResult {
   order: Order;
@@ -29,14 +32,34 @@ export class OfframpService {
   private readonly logger = new Logger(OfframpService.name);
   private readonly quotesCache = new Map<string, OfframpQuote>();
   private readonly anchorClient: AnchorClient;
+  private readonly payoutAdapter: PayoutAdapter;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly stateMachine: OrderStateMachineService,
     private readonly tieredLimits: TieredLimitsService,
-    private readonly complianceHook: MockComplianceHookService,
+    private readonly exchangeRates: ExchangeRatesService,
+    @Inject(COMPLIANCE_HOOK)
+    private readonly complianceHook: ComplianceHook,
   ) {
     this.anchorClient = new AnchorClient({ timeoutMs: 3000, maxRetries: 1 });
+
+    // Use real HTTP payout adapter if env vars are configured
+    const payoutApiUrl = process.env['PAYOUT_PROVIDER_API_URL'];
+    const payoutApiKey = process.env['PAYOUT_PROVIDER_API_KEY'];
+
+    if (payoutApiUrl && payoutApiKey) {
+      this.payoutAdapter = new HttpPayoutAdapter({
+        name: process.env['PAYOUT_PROVIDER_NAME'] ?? 'HttpPayout',
+        apiUrl: payoutApiUrl,
+        secretKey: payoutApiKey,
+        defaultFee: process.env['PAYOUT_PROVIDER_DEFAULT_FEE'] ?? '1.50',
+      });
+      this.logger.log(`HttpPayoutAdapter registered for provider '${process.env['PAYOUT_PROVIDER_NAME'] ?? 'HttpPayout'}'`);
+    } else {
+      this.payoutAdapter = new MockPayoutAdapter({ fixedFee: '1.50' });
+      this.logger.warn('PAYOUT_PROVIDER_API_URL/KEY not set — using MockPayoutAdapter');
+    }
   }
 
   /**
@@ -54,10 +77,9 @@ export class OfframpService {
       });
     }
 
-    // Default rate: 1 USDC = 1550 NGN (or 130 KES, 15 GHS)
-    let rate = 1550.0;
-    if (req.destinationCurrency.toUpperCase() === 'KES') rate = 130.0;
-    if (req.destinationCurrency.toUpperCase() === 'GHS') rate = 15.5;
+    // Fetch dynamic exchange rate from configured provider or fallback
+    const rateResponse = await this.exchangeRates.getRate(req.destinationCurrency);
+    const rate = rateResponse.rate;
 
     // Fees: Anchor fee 0.5% (min 0.50), Network fee 0.00001, Platform fee 0.25%
     const anchorFeeNum = Math.max(0.5, srcAmount * 0.005);
@@ -200,8 +222,9 @@ export class OfframpService {
 
     // 3. Obtain interactive withdrawal session
     const anchorTxId = `anchor-sep24-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    const anchorPort = process.env['MOCK_ANCHOR_PORT'] ?? '4001';
-    const interactiveUrl = `http://localhost:${anchorPort}/interactive?transaction_id=${anchorTxId}`;
+    // Use configured anchor URL or fallback to local mock anchor
+    const anchorBaseUrl = process.env['ANCHOR_BASE_URL'] ?? `http://localhost:${process.env['MOCK_ANCHOR_PORT'] ?? '4001'}`;
+    const interactiveUrl = `${anchorBaseUrl}/interactive?transaction_id=${anchorTxId}`;
 
     const orderId = crypto.randomUUID();
     const destinationAsset = { type: 'fiat', code: quote.destinationCurrency };

@@ -1,5 +1,13 @@
-import { Controller, Get, Param, Query, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  NotFoundException,
+  Res,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { PrismaService } from '../database/prisma.service';
 import { OrderStateMachineService } from './order-state-machine.service';
 
@@ -85,45 +93,82 @@ export class OrdersController {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           events: [
-            {
-              id: 'evt-1',
-              fromStatus: null,
-              toStatus: 'CREATED',
-              createdAt: new Date().toISOString(),
-            },
-            {
-              id: 'evt-2',
-              fromStatus: 'CREATED',
-              toStatus: 'QUOTED',
-              createdAt: new Date().toISOString(),
-            },
-            {
-              id: 'evt-3',
-              fromStatus: 'QUOTED',
-              toStatus: 'AWAITING_SIGNATURE',
-              createdAt: new Date().toISOString(),
-            },
-            {
-              id: 'evt-4',
-              fromStatus: 'AWAITING_SIGNATURE',
-              toStatus: 'SUBMITTED',
-              createdAt: new Date().toISOString(),
-            },
-            {
-              id: 'evt-5',
-              fromStatus: 'SUBMITTED',
-              toStatus: 'PROCESSING',
-              createdAt: new Date().toISOString(),
-            },
-            {
-              id: 'evt-6',
-              fromStatus: 'PROCESSING',
-              toStatus: 'COMPLETED',
-              createdAt: new Date().toISOString(),
-            },
+            { id: 'evt-1', fromStatus: null, toStatus: 'CREATED', createdAt: new Date().toISOString() },
+            { id: 'evt-2', fromStatus: 'CREATED', toStatus: 'QUOTED', createdAt: new Date().toISOString() },
+            { id: 'evt-3', fromStatus: 'QUOTED', toStatus: 'AWAITING_SIGNATURE', createdAt: new Date().toISOString() },
+            { id: 'evt-4', fromStatus: 'AWAITING_SIGNATURE', toStatus: 'SUBMITTED', createdAt: new Date().toISOString() },
+            { id: 'evt-5', fromStatus: 'SUBMITTED', toStatus: 'PROCESSING', createdAt: new Date().toISOString() },
+            { id: 'evt-6', fromStatus: 'PROCESSING', toStatus: 'COMPLETED', createdAt: new Date().toISOString() },
           ],
         },
       ];
     }
+  }
+
+  @Get('transactions/export')
+  @ApiOperation({ summary: 'Export transaction history as CSV or JSON' })
+  @ApiQuery({ name: 'userId', required: false })
+  @ApiQuery({ name: 'format', required: false, enum: ['csv', 'json'] })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  async exportTransactions(
+    @Query('userId') userId: string | undefined,
+    @Query('format') format = 'csv',
+    @Query('startDate') startDate: string | undefined,
+    @Query('endDate') endDate: string | undefined,
+    @Res() res: Response,
+  ): Promise<void> {
+    const dateFilter: Record<string, Date> = {};
+    if (startDate) dateFilter['gte'] = new Date(startDate);
+    if (endDate) dateFilter['lte'] = new Date(endDate);
+
+    let orders: Array<Record<string, unknown>>;
+    try {
+      orders = await this.prisma.order.findMany({
+        where: {
+          ...(userId ? { userId } : {}),
+          ...(Object.keys(dateFilter).length ? { createdAt: dateFilter } : {}),
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    } catch {
+      orders = [];
+    }
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+
+    if (format === 'json') {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename=transactions-${dateStr}.json`);
+      res.send(JSON.stringify(orders, null, 2));
+      return;
+    }
+
+    const header = 'orderId,type,status,sourceAmount,sourceAsset,destinationAsset,createdAt\n';
+    const rows = orders
+      .map((o) => {
+        const src = (o['sourceAsset'] as { code?: string } | undefined)?.code ?? '';
+        const dst = (o['destinationAsset'] as { code?: string } | undefined)?.code ?? '';
+        const created =
+          o['createdAt'] instanceof Date
+            ? o['createdAt'].toISOString()
+            : typeof o['createdAt'] === 'string' ? o['createdAt'] : '';
+        return [
+          typeof o['id'] === 'string' ? o['id'] : '',
+          typeof o['type'] === 'string' ? o['type'] : '',
+          typeof o['status'] === 'string' ? o['status'] : '',
+          typeof o['sourceAmount'] === 'string' ? o['sourceAmount'] : '',
+          src,
+          dst,
+          created,
+        ]
+          .map((v) => `"${v.replace(/"/g, '""')}"`)
+          .join(',');
+      })
+      .join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=transactions-${dateStr}.csv`);
+    res.send(header + rows);
   }
 }

@@ -4,6 +4,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { OrderStateMachineService } from '../../orders/order-state-machine.service';
 import { TieredLimitsService } from '../tiered-limits.service';
 import { MockComplianceHookService } from '../../compliance/mock-compliance-hook.service';
+import { ExchangeRatesService } from '../exchange-rates.service';
 import { OfframpService } from '../offramp.service';
 
 describe('OfframpService Integration', () => {
@@ -11,6 +12,7 @@ describe('OfframpService Integration', () => {
   let stateMachine: OrderStateMachineService;
   let tieredLimits: TieredLimitsService;
   let complianceHook: MockComplianceHookService;
+  let exchangeRates: ExchangeRatesService;
   let offrampService: OfframpService;
 
   beforeEach(() => {
@@ -18,10 +20,24 @@ describe('OfframpService Integration', () => {
     stateMachine = new OrderStateMachineService(prisma);
     tieredLimits = new TieredLimitsService(prisma);
     complianceHook = new MockComplianceHookService();
+
+    // Mock ExchangeRatesService — returns a deterministic fallback rate so tests
+    // never make real HTTP calls and produce stable assertions.
+    exchangeRates = {
+      getRate: (_currency: string) =>
+        Promise.resolve({
+          rate: 1550,
+          currency: 'NGN',
+          source: 'fallback' as const,
+          fetchedAt: new Date().toISOString(),
+        }),
+    } as unknown as ExchangeRatesService;
+
     offrampService = new OfframpService(
       prisma,
       stateMachine,
       tieredLimits,
+      exchangeRates,
       complianceHook,
     );
   });
