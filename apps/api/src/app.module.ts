@@ -11,6 +11,7 @@ import { BridgeModule } from './bridge/bridge.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { HealthModule } from './health/health.module';
 import { MetricsModule } from './metrics/metrics.module';
+import { AdminModule } from './admin/admin.module';
 import { RedisModule } from './redis/redis.module';
 import { RedisService } from './redis/redis.service';
 import { RedisThrottlerStorage } from './common/throttler/redis-throttler-storage';
@@ -24,6 +25,7 @@ import { SecurityHeadersMiddleware } from './common/middleware/security-headers.
     RedisModule,
     HealthModule,
     MetricsModule,
+    AdminModule,
     AuthModule,
     AssetsModule,
     SwapModule,
