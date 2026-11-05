@@ -1,16 +1,3 @@
-/**
- * HTTP-based Bridge Adapter
- *
- * Implements the BridgeAdapter interface against real third-party bridge
- * provider REST APIs.  The adapter is provider-agnostic: configure the base
- * URL, API key, and supported routes via the constructor config object.
- *
- * This adapter follows the pattern documented in docs/providers.md — it
- * performs real HTTP calls to the provider's quote, transfer, and status
- * endpoints, maps responses to the shared LumenFlow types, and handles
- * retries with exponential backoff.
- */
-
 import {
   type BridgeAdapter,
   type BridgeRoute,
@@ -20,22 +7,13 @@ import {
   type TransferStatus,
 } from '@lumenflow/shared-types';
 
-// ── Types ────────────────────────────────────────────────────────────────
-
 export interface HttpBridgeAdapterConfig {
-  /** Provider name shown in quotes/logs (e.g. "Allbridge", "Wormhole") */
   name: string;
-  /** Base URL of the bridge provider API */
   apiUrl: string;
-  /** API key or bearer token for authentication */
   apiKey: string;
-  /** Optional list of supported routes (fetched from API if omitted) */
   routes?: BridgeRoute[];
-  /** Request timeout in ms (default 10 000) */
   timeoutMs?: number;
-  /** Max retries for transient failures (default 3) */
   maxRetries?: number;
-  /** Fee percentage the bridge charges (used as fallback if API doesn't return fee) */
   feePercent?: number;
 }
 
@@ -67,12 +45,29 @@ interface ProviderStatusResponse {
   message?: string;
 }
 
-// ── Utility ──────────────────────────────────────────────────────────────
+// Raw route shape returned by the provider API
+interface ProviderRoute {
+  id?: string;
+  fromChain?: string;
+  source_chain?: string;
+  toChain?: string;
+  destination_chain?: string;
+  fromAsset?: string;
+  source_asset?: string;
+  toAsset?: string;
+  destination_asset?: string;
+  minAmount?: string;
+  min_amount?: string;
+  maxAmount?: string;
+  max_amount?: string;
+  estimatedDurationSeconds?: number;
+  estimated_duration_seconds?: number;
+  enabled?: boolean;
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-
-// ── Adapter ──────────────────────────────────────────────────────────────
 
 export class HttpBridgeAdapter implements BridgeAdapter {
   readonly name: string;
@@ -96,7 +91,7 @@ export class HttpBridgeAdapter implements BridgeAdapter {
 
   async isHealthy(): Promise<boolean> {
     try {
-      const res = await this.request('GET', '/health');
+      const res = await this.rawRequest('GET', '/health');
       return res.ok;
     } catch {
       return false;
@@ -109,17 +104,17 @@ export class HttpBridgeAdapter implements BridgeAdapter {
     }
 
     try {
-      const data = await this.request<unknown[]>('GET', '/routes');
-      this.cachedRoutes = data.map((r: Record<string, unknown>) => ({
-        id: String(r['id'] ?? `${r['fromChain']}-${r['toChain']}-${r['fromAsset']}`),
-        fromChain: String(r['fromChain'] ?? r['source_chain']),
-        toChain: String(r['toChain'] ?? r['destination_chain']),
-        fromAsset: String(r['fromAsset'] ?? r['source_asset']),
-        toAsset: String(r['toAsset'] ?? r['destination_asset']),
-        minAmount: String(r['minAmount'] ?? r['min_amount'] ?? '1.0'),
-        maxAmount: String(r['maxAmount'] ?? r['max_amount'] ?? '1000000.0'),
-        estimatedDurationSeconds: Number(r['estimatedDurationSeconds'] ?? r['estimated_duration_seconds'] ?? 300),
-        enabled: Boolean(r['enabled'] ?? true),
+      const data = await this.request<ProviderRoute[]>('GET', '/routes');
+      this.cachedRoutes = data.map((r) => ({
+        id: String(r.id ?? `${r.fromChain ?? r.source_chain}-${r.toChain ?? r.destination_chain}-${r.fromAsset ?? r.source_asset}`),
+        fromChain: String(r.fromChain ?? r.source_chain ?? ''),
+        toChain: String(r.toChain ?? r.destination_chain ?? ''),
+        fromAsset: String(r.fromAsset ?? r.source_asset ?? ''),
+        toAsset: String(r.toAsset ?? r.destination_asset ?? ''),
+        minAmount: String(r.minAmount ?? r.min_amount ?? '1.0'),
+        maxAmount: String(r.maxAmount ?? r.max_amount ?? '1000000.0'),
+        estimatedDurationSeconds: Number(r.estimatedDurationSeconds ?? r.estimated_duration_seconds ?? 300),
+        enabled: r.enabled ?? true,
       }));
       return this.cachedRoutes;
     } catch {
@@ -162,10 +157,7 @@ export class HttpBridgeAdapter implements BridgeAdapter {
     };
   }
 
-  async buildTransfer(
-    quote: BridgeQuote,
-    sender: string,
-  ): Promise<UnsignedTransfer> {
+  async buildTransfer(quote: BridgeQuote, sender: string): Promise<UnsignedTransfer> {
     const data = await this.request<ProviderTransferResponse>('POST', '/transfer', {
       quoteId: quote.id,
       sender,
@@ -214,8 +206,7 @@ export class HttpBridgeAdapter implements BridgeAdapter {
 
     const startTime = this.transferStartTimes.get(transferId);
     const elapsed = startTime ? Date.now() - startTime : 0;
-    const isStuck =
-      mappedStatus === 'PENDING' && elapsed > 600_000;
+    const isStuck = mappedStatus === 'PENDING' && elapsed > 600_000;
 
     return {
       transferId: data.transferId,
@@ -231,7 +222,24 @@ export class HttpBridgeAdapter implements BridgeAdapter {
     };
   }
 
-  // ── Internal HTTP helper with retry ────────────────────────────────────
+  // Returns raw Response — used only for health checks where we need res.ok
+  private async rawRequest(method: string, path: string): Promise<Response> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      const res = await fetch(`${this.apiUrl}${path}`, {
+        method,
+        headers: { Authorization: `Bearer ${this.apiKey}` },
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      return res;
+    } catch (err) {
+      clearTimeout(timeout);
+      throw err;
+    }
+  }
+
   private async request<T>(
     method: string,
     path: string,
@@ -248,16 +256,20 @@ export class HttpBridgeAdapter implements BridgeAdapter {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
-        const res = await fetch(`${this.apiUrl}${path}`, {
+        // Only include body for non-GET requests
+        const init: RequestInit = {
           method,
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${this.apiKey}`,
           },
-          body: body ? JSON.stringify(body) : undefined,
           signal: controller.signal,
-        });
+        };
+        if (body !== undefined) {
+          init.body = JSON.stringify(body);
+        }
 
+        const res = await fetch(`${this.apiUrl}${path}`, init);
         clearTimeout(timeout);
 
         if (!res.ok) {

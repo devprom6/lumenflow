@@ -93,43 +93,18 @@ export class OrdersController {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           events: [
-            {
-              id: 'evt-1',
-              fromStatus: null,
-              toStatus: 'CREATED',
-              createdAt: new Date().toISOString(),
-            },
-            {
-              id: 'evt-2',
-              fromStatus: 'CREATED',
-              toStatus: 'QUOTED',
-              createdAt: new Date().toISOString(),
-            },
-            {
-              id: 'evt-3',
-              fromStatus: 'QUOTED',
-              toStatus: 'AWAITING_SIGNATURE',
-              createdAt: new Date().toISOString(),
-            },
-            {
-              id: 'evt-4',
-              fromStatus: 'AWAITING_SIGNATURE',
-              toStatus: 'SUBMITTED',
-              createdAt: new Date().toISOString(),
-            },
-            {
-              id: 'evt-5',
-              fromStatus: 'SUBMITTED',
-              toStatus: 'PROCESSING',
-              createdAt: new Date().toISOString(),
-            },
-            {
-              id: 'evt-6',
-              fromStatus: 'PROCESSING',
-              toStatus: 'COMPLETED',
-              createdAt: new Date().toISOString(),
-            },
+            { id: 'evt-1', fromStatus: null, toStatus: 'CREATED', createdAt: new Date().toISOString() },
+            { id: 'evt-2', fromStatus: 'CREATED', toStatus: 'QUOTED', createdAt: new Date().toISOString() },
+            { id: 'evt-3', fromStatus: 'QUOTED', toStatus: 'AWAITING_SIGNATURE', createdAt: new Date().toISOString() },
+            { id: 'evt-4', fromStatus: 'AWAITING_SIGNATURE', toStatus: 'SUBMITTED', createdAt: new Date().toISOString() },
+            { id: 'evt-5', fromStatus: 'SUBMITTED', toStatus: 'PROCESSING', createdAt: new Date().toISOString() },
+            { id: 'evt-6', fromStatus: 'PROCESSING', toStatus: 'COMPLETED', createdAt: new Date().toISOString() },
           ],
+        },
+      ];
+    }
+  }
+
   @Get('transactions/export')
   @ApiOperation({ summary: 'Export transaction history as CSV or JSON' })
   @ApiQuery({ name: 'userId', required: false })
@@ -169,7 +144,6 @@ export class OrdersController {
       return;
     }
 
-    // CSV export
     const header = 'orderId,type,status,sourceAmount,sourceAsset,destinationAsset,createdAt\n';
     const rows = orders
       .map((o) => {
