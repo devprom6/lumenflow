@@ -14,11 +14,10 @@ RUN pnpm install --frozen-lockfile
 
 # ── Stage 2: Build workspace packages first, then the API ──────────────
 FROM deps AS builder
-# Build all workspace packages (shared-types, stellar, bridge-adapters, etc.)
-# so their compiled output exists for the API's tsc to import.
+# Build in dependency order: stellar before quote-engine (which imports stellar)
 RUN pnpm --filter @lumenflow/shared-types build \
- && pnpm --filter @lumenflow/quote-engine build \
  && pnpm --filter @lumenflow/stellar build \
+ && pnpm --filter @lumenflow/quote-engine build \
  && pnpm --filter @lumenflow/bridge-adapters build \
  && pnpm --filter @lumenflow/anchor-client build
 RUN pnpm --filter @lumenflow/api exec prisma generate

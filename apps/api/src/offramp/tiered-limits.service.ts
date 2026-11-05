@@ -26,8 +26,9 @@ export class TieredLimitsService {
         name: process.env['KYC_PROVIDER_NAME'] ?? 'HttpKyc',
         apiUrl: kycApiUrl,
         apiKey: kycApiKey,
-        partnerId: process.env['KYC_PROVIDER_PARTNER_ID'],
-        callbackUrl: process.env['KYC_PROVIDER_CALLBACK_URL'],
+        // Only pass optional fields when they have actual values
+        ...(process.env['KYC_PROVIDER_PARTNER_ID'] ? { partnerId: process.env['KYC_PROVIDER_PARTNER_ID'] } : {}),
+        ...(process.env['KYC_PROVIDER_CALLBACK_URL'] ? { callbackUrl: process.env['KYC_PROVIDER_CALLBACK_URL'] } : {}),
         defaultTier: 1,
       });
       this.logger.log(`HttpKycAdapter registered for provider '${process.env['KYC_PROVIDER_NAME'] ?? 'HttpKyc'}'`);
