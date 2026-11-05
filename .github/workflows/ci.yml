@@ -125,3 +125,37 @@ jobs:
 
       - name: Run Playwright E2E Tests
         run: pnpm --filter @lumenflow/web test:e2e
+
+  docker-build-check:
+    name: Dockerfile Build Check
+    runs-on: ubuntu-latest
+    # Run in parallel with ci — catches Dockerfile errors on every PR without waiting for tests
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API Dockerfile (no push)
+        run: |
+          docker build \
+            --file infra/docker/Dockerfile.api \
+            --tag lumenflow/api:ci-check \
+            --no-cache \
+            .
+
+      - name: Build Web Dockerfile (no push)
+        run: |
+          docker build \
+            --file infra/docker/Dockerfile.web \
+            --tag lumenflow/web:ci-check \
+            --no-cache \
+            .
+
+      - name: Build Worker Dockerfile (no push)
+        run: |
+          docker build \
+            --file infra/docker/Dockerfile.worker \
+            --tag lumenflow/worker:ci-check \
+            --no-cache \
+            .
