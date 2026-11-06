@@ -48,7 +48,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push API image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: infra/docker/Dockerfile.api
@@ -58,7 +58,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=api
 
       - name: Build and push Web image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: infra/docker/Dockerfile.web
@@ -68,7 +68,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=web
 
       - name: Build and push Worker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: infra/docker/Dockerfile.worker
