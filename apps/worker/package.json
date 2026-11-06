@@ -15,7 +15,7 @@
     "@lumenflow/bridge-adapters": "workspace:*",
     "@lumenflow/shared-types": "workspace:*",
     "@lumenflow/stellar": "workspace:*",
-    "@prisma/client": "7.10.0",
+    "@prisma/client": "7.10.1",
     "@sentry/node": "^11.10.0",
     "bullmq": "6.3.15",
     "ioredis": "6.0.0",
